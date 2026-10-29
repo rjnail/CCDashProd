@@ -10,6 +10,9 @@ import {
   eligiblePeople,
   emptyPlanningView,
   emptySeatView,
+  placeSeat,
+  seatOrder,
+  withSeatOrder,
   isPlanningScope,
   isSectionKey,
   parentChoiceAllowed,
@@ -471,7 +474,7 @@ function toSeat(
   names: Map<string, string>
 ): SeatNode {
   const accountabilities = Array.isArray(row.accountabilities)
-    ? row.accountabilities.filter((item): item is string => typeof item === "string")
+    ? row.accountabilities.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
   return {
     id: row.id,
@@ -497,9 +500,10 @@ export async function readSeatBundle(): Promise<{ ok: true; view: SeatView } | F
   const references = await client.from("pulse_seat_references").select("id, seat_id, label");
   if (missingStore(references.error)) return { ok: true, view: emptySeatView() };
   if (references.error) return { ok: false, error: safeError(references.error, PLANNING_NOT_STORED) };
-  const members = await client.from("pulse_team_members").select("user_id");
-  if (missingStore(members.error)) return { ok: true, view: emptySeatView() };
-  if (members.error) return { ok: false, error: safeError(members.error, PLANNING_NOT_STORED) };
+  const profiles = await client.from("user_profiles").select("id, display_name");
+  if (profiles.error && !missingStore(profiles.error)) {
+    return { ok: false, error: safeError(profiles.error, PLANNING_NOT_STORED) };
+  }
 
   const seatRows = (seats.data ?? []) as {
     id: string;
@@ -511,13 +515,19 @@ export async function readSeatBundle(): Promise<{ ok: true; view: SeatView } | F
     updated_at: string;
     archived_at: string | null;
   }[];
-  const memberIds = ((members.data ?? []) as { user_id?: string }[]).map((row) => row.user_id ?? "");
-  const names = await displayNames(client, [...memberIds, ...seatRows.map((row) => row.person_id ?? "")]);
+  const names = await displayNames(client, seatRows.map((row) => row.person_id ?? ""));
   const people = eligiblePeople(
-    [...names.entries()]
-      .filter(([id]) => memberIds.includes(id) || seatRows.some((row) => row.person_id === id))
-      .map(([id, name]) => ({ id, name }))
+    ((profiles.data ?? []) as { id?: string; display_name?: string | null }[]).map((row) => ({
+      id: row.id ?? "",
+      name: row.display_name?.trim() ?? "",
+    }))
   );
+  for (const row of seatRows) {
+    const name = row.person_id ? names.get(row.person_id) : undefined;
+    if (row.person_id && name && !people.some((person) => person.id === row.person_id)) {
+      people.push({ id: row.person_id, name });
+    }
+  }
   return {
     ok: true,
     view: {
@@ -555,6 +565,7 @@ export async function saveSeat(input: {
   personId: string | null;
   parentId: string | null;
   accountabilities: string[];
+  attachments?: string[] | null;
   expectedUpdatedAt: string | null;
   actorId: string;
 }): Promise<{ ok: true; seat: SeatNode } | Fail> {
@@ -576,6 +587,13 @@ export async function saveSeat(input: {
   const decision = concurrentEditResult(input.expectedUpdatedAt, existing?.updatedAt ?? null);
   if (decision === "conflict") return { ok: false, error: CONFLICT, conflict: true };
   const row = seatRowForSave(input);
+  const rawOrder = existing
+    ? seatOrder(existing.functionLabel)
+    : live
+        .filter((seat) => seat.parentId === input.parentId)
+        .reduce((max, seat) => Math.max(max, seatOrder(seat.functionLabel) === Number.MAX_SAFE_INTEGER ? 0 : seatOrder(seat.functionLabel)), 0) + 1;
+  row.function_label = withSeatOrder(rawOrder === Number.MAX_SAFE_INTEGER ? 1 : rawOrder, input.title);
+  row.accountabilities = row.accountabilities.length > 0 ? row.accountabilities : [""];
   const payload = {
     ...row,
     updated_at: new Date().toISOString(),
@@ -624,8 +642,71 @@ export async function saveSeat(input: {
     actorId: input.actorId,
   });
   if (!audit.ok) return audit;
+  if (input.attachments) {
+    const attachments = await replaceSeatAttachments(client, saved.id, input.attachments);
+    if (!attachments.ok) return attachments;
+  }
   const names = await displayNames(client, [saved.person_id ?? ""]);
   return { ok: true, seat: toSeat(saved, names) };
+}
+
+async function replaceSeatAttachments(client: Admin, seatId: string, labels: string[]): Promise<Fail | { ok: true }> {
+  const cleaned = [...new Set(labels.map((label) => label.trim()).filter(Boolean))].slice(0, 8);
+  const removed = await client.from("pulse_seat_references").delete().eq("seat_id", seatId);
+  if (missingStore(removed.error)) return { ok: false, error: PLANNING_NOT_STORED };
+  if (removed.error) return { ok: false, error: safeError(removed.error, "The seat was saved, but its attachments were not.") };
+  if (cleaned.length === 0) return { ok: true };
+  const inserted = await client.from("pulse_seat_references").insert(cleaned.map((label) => ({ seat_id: seatId, label })));
+  if (missingStore(inserted.error)) return { ok: false, error: PLANNING_NOT_STORED };
+  if (inserted.error) return { ok: false, error: safeError(inserted.error, "The seat was saved, but its attachments were not.") };
+  return { ok: true };
+}
+
+export async function moveStoredSeat(input: {
+  seatId: string;
+  parentId: string | null;
+  index: number;
+  actorId: string;
+}): Promise<{ ok: true } | Fail> {
+  const client = admin();
+  if (!client) return { ok: false, error: PLANNING_NOT_STORED };
+  const currentView = await readSeatBundle();
+  if (!currentView.ok) return currentView;
+  if (!currentView.view.stored) return { ok: false, error: PLANNING_NOT_STORED };
+  const placed = placeSeat(currentView.view.seats, input.seatId, input.parentId, input.index);
+  if (!placed.ok) return { ok: false, error: placed.reason };
+  for (const update of placed.updates) {
+    const existing = currentView.view.seats.find((seat) => seat.id === update.id);
+    if (!existing) return { ok: false, error: "That seat is not on the chart." };
+    const written = await client
+      .from("pulse_seats")
+      .update({
+        parent_id: update.parentId,
+        function_label: update.functionLabel,
+        updated_at: new Date().toISOString(),
+        updated_by: input.actorId,
+      })
+      .eq("id", update.id)
+      .eq("updated_at", existing.updatedAt)
+      .select("id")
+      .maybeSingle();
+    if (missingStore(written.error)) return { ok: false, error: PLANNING_NOT_STORED };
+    if (written.error || !written.data) {
+      const message = written.error?.message ?? "";
+      if (/cycle|report to itself/i.test(message)) {
+        return { ok: false, error: "That seat cannot report to itself or to a seat under it." };
+      }
+      return { ok: false, error: CONFLICT, conflict: true };
+    }
+    const audit = await writeSeatAudit(client, {
+      seatId: update.id,
+      previous: { parent_id: existing.parentId, function_label: existing.functionLabel },
+      next: { parent_id: update.parentId, function_label: update.functionLabel },
+      actorId: input.actorId,
+    });
+    if (!audit.ok) return audit;
+  }
+  return { ok: true };
 }
 
 export async function archiveStoredSeat(input: {

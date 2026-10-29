@@ -13,7 +13,6 @@ import { WorkBoard } from "@/components/os/PulseEditors";
 import { ScorecardBoard } from "@/components/os/ScorecardBoard";
 import { VisionBoard } from "@/components/os/VisionBoard";
 import { concludeMeeting } from "@/lib/os/conclude-actions";
-import { SCORECARD_MIGRATION_FILE } from "@/lib/os/scorecard";
 import {
   blankDraft,
   consumePause,
@@ -24,17 +23,17 @@ import {
   setMeetingDraft,
   type MeetingDraft,
 } from "@/components/os/meeting-draft";
-import { formatMoney, PULSE_CAMPUS_OPTIONS, qualityTone, showsPulseCampusSwitcher } from "@/lib/os/rules";
+import { formatMoney, PULSE_CAMPUS_OPTIONS, showsPulseCampusSwitcher } from "@/lib/os/rules";
 import { OS_TEAM_LABELS, type OsAskContext, type OsCampus, type OsMeasure, type OsPageData, type OsTeam } from "@/lib/os/types";
 
 const VIEWS = [
   ["overview", "Overview"],
-  ["meeting", "Run meeting"],
+  ["meeting", "Meeting Agenda"],
   ["scorecard", "Scorecard"],
   ["rocks", "Quarterly Rocks"],
-  ["todos", "To-dos"],
+  ["todos", "To-Do's"],
   ["issues", "Issues / IDS"],
-  ["history", "Meeting history"],
+  ["history", "Meeting History"],
   ["insights", "Insights"],
   ["ask", "Ask Community OS"],
   ["vision", "Vision"],
@@ -50,7 +49,7 @@ const AGENDA = [
   ["Scorecard", 5],
   ["Rock review", 5],
   ["Headlines", 5],
-  ["To-do review", 5],
+  ["To-Do Review", 5],
   ["IDS", 60],
   ["Conclude", 5],
 ] as const;
@@ -144,12 +143,8 @@ export function PulseShell({
       <div className="pulse">
         <div className="pulse-shell">
           <aside>
-            <BrandLogo href={null} variant="light" showSubtitle={false} size="sm" />
-            <p className="foot">
-              Community Church
-              <br />
-              Pulse Meeting
-            </p>
+            <BrandLogo href="/" stack variant="light" showSubtitle={false} size="sm" />
+            {data.canOpenUsers ? <AdminSideLinks /> : null}
           </aside>
           <div>
             <header className="top">
@@ -165,9 +160,11 @@ export function PulseShell({
             </header>
             <div className="content">
               <section className="card">
-                <h1>No meeting workspace</h1>
+                <h1>{data.canOpenUsers ? "No meeting assigned" : "No meeting workspace"}</h1>
                 <p>
-                  Your account is not assigned to a Pulse Meeting. An administrator can assign one from Admin Settings.
+                  {data.canOpenUsers
+                    ? "You are not checked into a meeting. Admin Settings is at the bottom left. Meeting pages stay hidden until you are checked into that team."
+                    : "Your account is not assigned to a Pulse Meeting. An administrator can assign one from Admin Settings."}
                 </p>
               </section>
             </div>
@@ -181,7 +178,7 @@ export function PulseShell({
     <div className="pulse">
       <div className="pulse-shell">
         <aside>
-          <BrandLogo href={null} variant="light" showSubtitle={false} size="sm" />
+          <BrandLogo href="/" stack variant="light" showSubtitle={false} size="sm" />
           {data.teams.length > 1 ? (
             <select
               className="team-select"
@@ -199,23 +196,14 @@ export function PulseShell({
             <div className="team-current">{OS_TEAM_LABELS[data.team]}</div>
           )}
           <div>
-            <div className="navlabel">Meeting workspace</div>
-            <nav aria-label="Meeting workspace">
+            <div className="navlabel">Meeting Workspace</div>
+            <nav aria-label="Meeting Workspace">
               {VIEWS.filter(([id]) => !SHARED_VIEWS.has(id)).map(([id, label]) => navLink(id, label))}
               <hr className="nav-rule" />
               {VIEWS.filter(([id]) => SHARED_VIEWS.has(id)).map(([id, label]) => navLink(id, label))}
             </nav>
           </div>
-          <p className="foot">
-            Community Church
-            <br />
-            Pulse Meeting
-            <br />
-            <br />
-            Reporting stays intact.
-            <br />
-            Teams work from shared measures.
-          </p>
+          {data.canOpenUsers ? <AdminSideLinks /> : null}
         </aside>
         <div>
           <header className="top">
@@ -234,17 +222,6 @@ export function PulseShell({
           </header>
           <TangentProvider team={data.team} canFacilitate={data.canFacilitate}>
           <div className="content">
-            <div className="banner">
-              Meeting notes and finished meetings stay on this page. Giving still follows Financials access.
-              {!data.storageReady &&
-                ` Scorecard, Rock, to-do, and IDS saves cannot be stored until the Pulse migrations are applied to a named development database. Voting and resolutions also wait on supabase/migrations/20261029194500_pulse_ids.sql. Scorecard audit waits on ${SCORECARD_MIGRATION_FILE}.`}
-              {data.storageReady && !data.scorecardAuditReady
-                ? ` Scorecard selections use the meeting items table. Audit history and the duplicate-selection index are not stored until ${SCORECARD_MIGRATION_FILE} is applied to a named development database.`
-                : ""}
-              {!data.modelConfigured && data.modelMissing
-                ? ` No language model is configured (${data.modelMissing}). Insights and answers stay rules-based.`
-                : ""}
-            </div>
             {view === "overview" && (
               <Overview data={data} href={href} onDefine={setDetailKey} onNotify={notify} />
             )}
@@ -307,6 +284,16 @@ export function PulseShell({
   );
 }
 
+function AdminSideLinks() {
+  return (
+    <div className="admin-side">
+      <Link href="/settings" className="admin-settings-btn">
+        Admin Settings
+      </Link>
+    </div>
+  );
+}
+
 function CampusLens({
   campus,
   onChange,
@@ -325,15 +312,12 @@ function CampusLens({
     <div
       className="campus-lens"
       role="radiogroup"
-      aria-labelledby="campus-lens-label"
+      aria-label="Campus"
       onKeyDown={(event) => {
         if (event.key === "ArrowRight" || event.key === "ArrowDown") move(event, 1);
         if (event.key === "ArrowLeft" || event.key === "ArrowUp") move(event, -1);
       }}
     >
-      <span className="campus-lens-label" id="campus-lens-label">
-        Campus lens
-      </span>
       {options.map((option) => {
         const selected = campus === option.id;
         return (
@@ -485,7 +469,7 @@ function Overview({
         action={
           <>
             <Link className="btn primary" href={href({ view: "meeting" })}>
-              Open meeting →
+              Lets Get Started →
             </Link>
             <Link className="btn" href="/dashboard">
               View In Dashboard
@@ -498,7 +482,6 @@ function Overview({
           <section key={measure.key} className="card">
             <div className="spaced">
               <span className="metriclabel">{measure.label}</span>
-              <span className={qualityTone(measure.quality)}>{measure.quality}</span>
             </div>
             <div className="value">{showValue(measure)}</div>
             <div className="mini">{measure.periodLabel}</div>
@@ -546,35 +529,60 @@ function Overview({
           </Link>
         </section>
       </div>
-      <div className="three">
-        <section className="card">
-          <h2>Commitments</h2>
-          <div className="value">{data.items.filter((item) => item.kind === "todo" && item.rockStatus !== "complete").length}</div>
-          <p className="mini">Open in {OS_TEAM_LABELS[data.team]}</p>
-          <Link className="btn" href={href({ view: "todos" })}>
-            Review to-dos
-          </Link>
-        </section>
-        <section className="card">
-          <h2>Issues to solve</h2>
-          <div className="value">
-            {data.items.filter((item) => item.kind === "issue" && item.issueStatus !== "solved" && item.issueStatus !== "long_term").length}
-          </div>
-          <p className="mini">Decisions become assigned actions</p>
-          <Link className="btn" href={href({ view: "issues" })}>
-            Open IDS
-          </Link>
-        </section>
-        <section className="card">
-          <h2>Meeting rhythm</h2>
-          <div className="value">0</div>
-          <p className="mini">Completed meetings stored for this team</p>
-          <Link className="btn" href={href({ view: "history" })}>
-            View meeting history
-          </Link>
-        </section>
+      <div className="twocol">
+        <MineCard
+          title="My To-Do's"
+          empty="No open to-dos assigned to you."
+          href={href({ view: "todos" })}
+          action="Open To-Do's"
+          items={data.items.filter(
+            (item) => item.kind === "todo" && item.rockStatus !== "complete" && item.ownerUserId === data.viewerId
+          )}
+        />
+        <MineCard
+          title="My Issues"
+          empty="No open issues assigned to you."
+          href={href({ view: "issues" })}
+          action="Open Issues"
+          items={data.items.filter(
+            (item) => item.kind === "issue" && item.issueStatus !== "solved" && item.ownerUserId === data.viewerId
+          )}
+        />
       </div>
     </>
+  );
+}
+
+function MineCard({
+  title,
+  empty,
+  href,
+  action,
+  items,
+}: {
+  title: string;
+  empty: string;
+  href: string;
+  action: string;
+  items: { id: string; title: string }[];
+}) {
+  return (
+    <section className="card">
+      <h2>{title}</h2>
+      <div className="value">{items.length}</div>
+      {items.length === 0 ? (
+        <p className="mini">{empty}</p>
+      ) : (
+        <ul className="mine-list">
+          {items.slice(0, 5).map((item) => (
+            <li key={item.id}>{item.title}</li>
+          ))}
+        </ul>
+      )}
+      <Link className="btn" href={href}>
+        {action}
+      </Link>
+    </section>
   );
 }
 

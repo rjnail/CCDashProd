@@ -617,6 +617,14 @@ export function canManageSeats(input: { isAdmin: boolean }): boolean {
   return input.isAdmin;
 }
 
+export function pulseWorkspaceAccess(input: {
+  isAdmin: boolean;
+  teamCount: number;
+}): "workspace" | "admin-only" | "denied" {
+  if (input.teamCount > 0) return "workspace";
+  return input.isAdmin ? "admin-only" : "denied";
+}
+
 export function canApprovePlan(input: { isAdmin: boolean }): boolean {
   return input.isAdmin;
 }
@@ -734,6 +742,85 @@ export function parentChoiceAllowed(
   return { ok: true };
 }
 
+const SEAT_ORDER = /^(\d{4})\|([\s\S]*)$/;
+
+export function seatOrder(functionLabel: string): number {
+  const match = SEAT_ORDER.exec(functionLabel);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+}
+
+export function seatLabelBody(functionLabel: string): string {
+  const match = SEAT_ORDER.exec(functionLabel);
+  return (match ? match[2] : functionLabel).trim();
+}
+
+export function withSeatOrder(sort: number, functionLabel: string): string {
+  const body = seatLabelBody(functionLabel);
+  return `${String(Math.max(1, sort)).padStart(4, "0")}|${body}`;
+}
+
+export function compareSeatOrder(a: { functionLabel: string; title: string }, b: { functionLabel: string; title: string }): number {
+  const order = seatOrder(a.functionLabel) - seatOrder(b.functionLabel);
+  if (order !== 0) return order;
+  return a.title.localeCompare(b.title);
+}
+
+export function placeSeat(
+  seats: readonly SeatNode[],
+  seatId: string,
+  parentId: string | null,
+  index: number
+):
+  | { ok: true; updates: { id: string; parentId: string | null; functionLabel: string }[] }
+  | { ok: false; reason: string } {
+  const active = seats.filter((seat) => !seat.archivedAt);
+  const moving = active.find((seat) => seat.id === seatId);
+  if (!moving) return { ok: false, reason: "That seat is not on the chart." };
+  const parent = parentChoiceAllowed(
+    active.map((seat) => ({ id: seat.id, parentId: seat.parentId })),
+    seatId,
+    parentId
+  );
+  if (!parent.ok) return parent;
+
+  const groups = new Map<string, SeatNode[]>();
+  const keyOf = (id: string | null) => id ?? "";
+  for (const seat of active) {
+    const key = keyOf(seat.parentId);
+    const list = groups.get(key) ?? [];
+    list.push(seat);
+    groups.set(key, list);
+  }
+  for (const list of groups.values()) list.sort(compareSeatOrder);
+
+  const fromKey = keyOf(moving.parentId);
+  const from = groups.get(fromKey) ?? [];
+  const fromIndex = from.findIndex((seat) => seat.id === seatId);
+  from.splice(fromIndex, 1);
+
+  const toKey = keyOf(parentId);
+  const to = fromKey === toKey ? from : (groups.get(toKey) ?? []);
+  if (fromKey !== toKey) groups.set(toKey, to);
+  let target = index;
+  if (fromKey === toKey && fromIndex < target) target -= 1;
+  to.splice(Math.max(0, Math.min(target, to.length)), 0, moving);
+
+  const original = new Map(active.map((seat) => [seat.id, seat]));
+  const updates: { id: string; parentId: string | null; functionLabel: string }[] = [];
+  for (const key of new Set([fromKey, toKey])) {
+    (groups.get(key) ?? []).forEach((seat, position) => {
+      const prior = original.get(seat.id);
+      if (!prior) return;
+      const nextParent = seat.id === seatId ? parentId : prior.parentId;
+      const nextLabel = withSeatOrder(position + 1, prior.functionLabel);
+      if (nextParent !== prior.parentId || nextLabel !== prior.functionLabel) {
+        updates.push({ id: seat.id, parentId: nextParent, functionLabel: nextLabel });
+      }
+    });
+  }
+  return { ok: true, updates };
+}
+
 export function descendantIds(seats: readonly { id: string; parentId: string | null }[], rootId: string): string[] {
   const children = new Map<string, string[]>();
   for (const seat of seats) {
@@ -773,7 +860,7 @@ export function validateSeatDraft(input: {
     return { ok: false, reason: "Enter one to five accountabilities." };
   }
   const accountabilities = input.accountabilities.map((item) => item.trim().slice(0, SHORT_MAX)).filter(Boolean);
-  if (accountabilities.length < 1 || accountabilities.length > 5) {
+  if (accountabilities.length > 5) {
     return { ok: false, reason: "Enter one to five accountabilities." };
   }
   const personId = input.personId?.trim() || null;

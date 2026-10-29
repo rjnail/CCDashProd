@@ -16,6 +16,7 @@ import {
 import type { UserProfile } from "@/lib/types";
 import { TARGET_FISCAL_YEAR } from "@/lib/types";
 import { readModelConfig } from "./model";
+import { pulseWorkspaceAccess } from "./planning";
 import {
   buildInsights,
   buildMeetingInsights,
@@ -116,7 +117,9 @@ export async function loadPulsePage(
 ): Promise<OsPageData> {
   const membership = await readOwnMeetings(supabase, profile.id);
   const teams = membership.missing ? [...OS_TEAMS] : membership.teams;
-  if (teams.length === 0) return deniedPage(profile);
+  const access = pulseWorkspaceAccess({ isAdmin: isAdmin(profile), teamCount: teams.length });
+  if (access === "denied") return deniedPage(profile);
+  if (access === "admin-only") return adminSettingsPage(profile);
 
   const team = teams.includes(requestedTeam as OsTeam)
     ? (requestedTeam as OsTeam)
@@ -303,6 +306,14 @@ export async function loadPulsePage(
     .map((row) => ({ periodStart: row.periodStart, value: row.value as number }));
 
   return page(profile, team, campus, campusLabel, measures, attendanceMonths, reportLinks, context);
+}
+
+function adminSettingsPage(profile: UserProfile): OsPageData {
+  return {
+    ...deniedPage(profile),
+    canEdit: true,
+    canOpenUsers: true,
+  };
 }
 
 function deniedPage(profile: UserProfile): OsPageData {

@@ -30,6 +30,7 @@ import {
   readSeatBundle,
   readSharedWork,
   savePlanningSection,
+  moveStoredSeat,
   savePlanningVersion,
   saveSeat,
 } from "./planning-store";
@@ -221,6 +222,7 @@ export async function saveAccountabilitySeat(input: {
   personId: string | null;
   parentId: string | null;
   accountabilities: string[];
+  attachments?: string[] | null;
   expectedUpdatedAt: string | null;
 }) {
   const auth = await actor(input.team);
@@ -232,7 +234,7 @@ export async function saveAccountabilitySeat(input: {
   if (!people.view.stored) return { ok: false as const, error: PLANNING_NOT_STORED };
   const draft = validateSeatDraft({
     title: input.title,
-    functionLabel: input.functionLabel,
+    functionLabel: input.functionLabel.trim() || input.title,
     personId: input.personId,
     accountabilities: input.accountabilities,
     eligiblePersonIds: people.view.people.map((person) => person.id),
@@ -245,11 +247,32 @@ export async function saveAccountabilitySeat(input: {
     personId: draft.personId,
     parentId: input.parentId,
     accountabilities: draft.accountabilities,
+    attachments: input.attachments ?? null,
     expectedUpdatedAt: input.expectedUpdatedAt,
     actorId: auth.userId,
   });
   if (saved.ok) revalidatePath("/pulse");
   return saved;
+}
+
+export async function moveAccountabilitySeat(input: {
+  team: string;
+  seatId: string;
+  parentId: string | null;
+  index: number;
+}) {
+  const auth = await actor(input.team);
+  if (!auth.ok) return auth;
+  if (!canManageSeats(auth)) return { ok: false as const, error: "Only an administrator can manage seats." };
+  if (!auth.tablesReady) return { ok: false as const, error: PLANNING_NOT_STORED };
+  const moved = await moveStoredSeat({
+    seatId: input.seatId,
+    parentId: input.parentId,
+    index: input.index,
+    actorId: auth.userId,
+  });
+  if (moved.ok) revalidatePath("/pulse");
+  return moved;
 }
 
 export async function archiveAccountabilitySeat(input: {

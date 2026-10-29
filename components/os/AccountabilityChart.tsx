@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import "./planning.css";
-import { archiveAccountabilitySeat, loadSeatView, saveAccountabilitySeat } from "@/lib/os/planning-actions";
+import { archiveAccountabilitySeat, loadSeatView, moveAccountabilitySeat, saveAccountabilitySeat } from "@/lib/os/planning-actions";
 import {
   PLANNING_UNAVAILABLE,
   activeSeats,
-  descendantIds,
+  compareSeatOrder,
   emptySeatView,
+  seatLabelBody,
   type ArchiveReferenceChoice,
   type ArchiveSubordinateChoice,
   type SeatNode,
@@ -24,6 +25,7 @@ type SeatDraft = {
   personId: string;
   parentId: string;
   accountabilities: string[];
+  attachments: string[];
   expectedUpdatedAt: string | null;
   baseline: string;
   subordinateChoice: "" | ArchiveSubordinateChoice;
@@ -49,6 +51,7 @@ export function AccountabilityChart({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<SeatDraft | null>(null);
   const [pending, setPending] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const canManage = data.canEdit;
@@ -105,7 +108,8 @@ export function AccountabilityChart({
       functionLabel: seat?.functionLabel ?? "",
       personId: eligible,
       parentId: seat ? (seat.parentId ?? "") : parentId,
-      accountabilities: seat?.accountabilities.length ? [...seat.accountabilities] : [""],
+      accountabilities: seat?.accountabilities.length ? [...seat.accountabilities] : [],
+      attachments: seat ? (bundle?.references ?? []).filter((item) => item.seatId === seat.id).map((item) => item.label) : [],
       expectedUpdatedAt: seat?.updatedAt ?? null,
       baseline: "",
       subordinateChoice: "",
@@ -130,10 +134,11 @@ export function AccountabilityChart({
       team: data.team,
       id: draft.id,
       title: draft.title,
-      functionLabel: draft.functionLabel,
+      functionLabel: draft.functionLabel || draft.title,
       personId: draft.personId || null,
       parentId: draft.parentId || null,
       accountabilities: draft.accountabilities,
+      attachments: draft.attachments,
       expectedUpdatedAt: draft.expectedUpdatedAt,
     });
     setPending(false);
@@ -145,7 +150,43 @@ export function AccountabilityChart({
     }
     setDraft(null);
     await reload();
-    onNotify("Seat saved. Assignment does not grant access.");
+    onNotify(draft.id ? "Seat saved." : "Seat created.");
+  }
+
+  async function place(seatId: string, parentId: string | null, index: number) {
+    if (!canManage || pending) return;
+    setPending(true);
+    const result = await moveAccountabilitySeat({ team: data.team, seatId, parentId, index });
+    setPending(false);
+    setDragId(null);
+    if (!result.ok) {
+      onNotify(result.error);
+      await reload();
+      return;
+    }
+    await reload();
+  }
+
+  async function assignPerson(seat: SeatNode, personId: string) {
+    if (!canManage || pending) return;
+    setPending(true);
+    const result = await saveAccountabilitySeat({
+      team: data.team,
+      id: seat.id,
+      title: seat.title,
+      functionLabel: seat.functionLabel || seat.title,
+      personId: personId || null,
+      parentId: seat.parentId,
+      accountabilities: seat.accountabilities,
+      expectedUpdatedAt: seat.updatedAt,
+    });
+    setPending(false);
+    if (!result.ok) {
+      onNotify(result.error);
+      await reload();
+      return;
+    }
+    await reload();
   }
 
   async function archiveDraft() {
@@ -181,7 +222,9 @@ export function AccountabilityChart({
     onNotify("Seat archived.");
   }
 
-  const roots = seats.filter((seat) => !seat.parentId || !seats.some((item) => item.id === seat.parentId));
+  const roots = seats
+    .filter((seat) => !seat.parentId || !seats.some((item) => item.id === seat.parentId))
+    .sort(compareSeatOrder);
 
   return (
     <>
@@ -189,18 +232,19 @@ export function AccountabilityChart({
         <div>
           <div className="eyebrow">Church-wide</div>
           <h1>Accountability Chart</h1>
-          <div className="sub">Structure first. Clear seats, one accountable person, and a few essential accountabilities.</div>
+          <div className="sub">One church-wide chart. Drag a seat to move it.</div>
         </div>
         {canManage ? (
           <button type="button" className="btn primary" onClick={() => openDraft(null, "")}>
-            + Add top seat
+            New Seat
           </button>
         ) : null}
       </div>
-      <div className="notice">
-        <strong>Functional accountability only.</strong> This chart does not represent elder governance, legal authority, employment reporting, or application permissions. Choosing a person does not grant access.
-        {bundle && !bundle.stored ? ` ${PLANNING_UNAVAILABLE} File: ${bundle.migrationFile}.` : ""}
-      </div>
+      {bundle && !bundle.stored ? (
+        <p className="mini">
+          {PLANNING_UNAVAILABLE} File: {bundle.migrationFile}.
+        </p>
+      ) : null}
       {loadError ? <p className="mini">{loadError}</p> : null}
       {!bundle ? <p className="mini">Loading the chart…</p> : null}
       {bundle ? (
@@ -241,20 +285,25 @@ export function AccountabilityChart({
             </div>
           </div>
           {seats.length === 0 ? (
-            <p className="empty">No seats are stored yet. Add a top-level seat when the structure is ready. Nothing here is an approved chart.</p>
+            <p className="empty">No seats yet. Create a seat when the chart is ready.</p>
           ) : null}
           {mode === "Chart" && seats.length > 0 ? (
             <>
               <div className="chart-viewport" tabIndex={0} aria-label="Accountability hierarchy, scroll horizontally to explore">
                 <div className="chart-scale" style={{ zoom: zoom / 100 }}>
                   <ul className="seat-tree">
-                    {roots.map((seat) => (
+                    {roots.map((seat, index) => (
                       <SeatBranch
                         key={seat.id}
                         seat={seat}
+                        index={index}
                         seats={seats}
+                        people={people}
                         collapsed={collapsed}
                         canManage={canManage}
+                        pending={pending}
+                        dragId={dragId}
+                        onDragId={setDragId}
                         onToggle={(id) =>
                           setCollapsed((current) => {
                             const next = new Set(current);
@@ -265,8 +314,27 @@ export function AccountabilityChart({
                         }
                         onEdit={(item) => openDraft(item, "")}
                         onAdd={(parentId) => openDraft(null, parentId)}
+                        onPlace={(seatId, parentId, at) => void place(seatId, parentId, at)}
+                        onAssign={(item, personId) => void assignPerson(item, personId)}
                       />
                     ))}
+                    {canManage ? (
+                      <li>
+                        <div
+                          className="seat-slot"
+                          onDragOver={(event) => {
+                            if (dragId) event.preventDefault();
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const seatId = event.dataTransfer.getData("text/plain") || dragId;
+                            if (seatId) void place(seatId, null, roots.length);
+                          }}
+                        >
+                          Drop here for a top seat
+                        </div>
+                      </li>
+                    ) : null}
                   </ul>
                 </div>
               </div>
@@ -275,17 +343,24 @@ export function AccountabilityChart({
           ) : null}
           {mode === "Seat directory" && seats.length > 0 ? (
             <div className="seat-directory">
-              {seats.map((seat) => (
+              {[...seats].sort(compareSeatOrder).map((seat) => (
                 <section key={seat.id}>
                   <SeatCard
                     seat={seat}
+                    seats={seats}
+                    siblings={seats.filter((item) => item.parentId === seat.parentId).sort(compareSeatOrder)}
                     childCount={seats.filter((item) => item.parentId === seat.id).length}
                     collapsed={false}
                     canManage={canManage}
+                    pending={pending}
+                    people={people}
                     onToggle={() => undefined}
                     onEdit={() => openDraft(seat, "")}
                     onAdd={() => openDraft(null, seat.id)}
                     showCollapse={false}
+                    onPlace={(seatId, parentId, at) => void place(seatId, parentId, at)}
+                    onAssign={(personId) => void assignPerson(seat, personId)}
+                    onDragId={setDragId}
                   />
                   <p className="mini">Reports to: {seats.find((item) => item.id === seat.parentId)?.title ?? "Top seat"}</p>
                 </section>
@@ -331,6 +406,7 @@ function snapshot(draft: SeatDraft): string {
     personId: draft.personId,
     parentId: draft.parentId,
     accountabilities: draft.accountabilities,
+    attachments: draft.attachments,
     subordinateChoice: draft.subordinateChoice,
     referenceChoice: draft.referenceChoice,
   });
@@ -338,47 +414,78 @@ function snapshot(draft: SeatDraft): string {
 
 function SeatBranch({
   seat,
+  index,
   seats,
+  people,
   collapsed,
   canManage,
+  pending,
+  dragId,
+  onDragId,
   onToggle,
   onEdit,
   onAdd,
+  onPlace,
+  onAssign,
 }: {
   seat: SeatNode;
+  index: number;
   seats: SeatNode[];
+  people: { id: string; name: string }[];
   collapsed: Set<string>;
   canManage: boolean;
+  pending: boolean;
+  dragId: string | null;
+  onDragId: (id: string | null) => void;
   onToggle: (id: string) => void;
   onEdit: (seat: SeatNode) => void;
   onAdd: (parentId: string) => void;
+  onPlace: (seatId: string, parentId: string | null, index: number) => void;
+  onAssign: (seat: SeatNode, personId: string) => void;
 }) {
-  const children = seats.filter((item) => item.parentId === seat.id);
+  const siblings = seats.filter((item) => item.parentId === seat.parentId).sort(compareSeatOrder);
+  const children = seats.filter((item) => item.parentId === seat.id).sort(compareSeatOrder);
   const open = !collapsed.has(seat.id);
   return (
     <li>
-      <SeatCard
-        seat={seat}
-        childCount={children.length}
+        <SeatCard
+          seat={seat}
+          seats={seats}
+          siblings={siblings}
+          index={index}
+          childCount={children.length}
         collapsed={!open}
         canManage={canManage}
+        pending={pending}
+        people={people}
         showCollapse={children.length > 0}
+        dragId={dragId}
+        onDragId={onDragId}
         onToggle={() => onToggle(seat.id)}
         onEdit={() => onEdit(seat)}
         onAdd={() => onAdd(seat.id)}
+        onPlace={onPlace}
+        onAssign={(personId) => onAssign(seat, personId)}
       />
       {children.length > 0 && open ? (
         <ul>
-          {children.map((child) => (
+          {children.map((child, childIndex) => (
             <SeatBranch
               key={child.id}
               seat={child}
+              index={childIndex}
               seats={seats}
+              people={people}
               collapsed={collapsed}
               canManage={canManage}
+              pending={pending}
+              dragId={dragId}
+              onDragId={onDragId}
               onToggle={onToggle}
               onEdit={onEdit}
               onAdd={onAdd}
+              onPlace={onPlace}
+              onAssign={onAssign}
             />
           ))}
         </ul>
@@ -389,62 +496,170 @@ function SeatBranch({
 
 function SeatCard({
   seat,
+  seats,
+  siblings,
+  index,
   childCount,
   collapsed,
   canManage,
+  pending,
+  people,
   showCollapse,
+  dragId,
+  onDragId,
   onToggle,
   onEdit,
   onAdd,
+  onPlace,
+  onAssign,
 }: {
   seat: SeatNode;
+  seats: SeatNode[];
+  siblings: SeatNode[];
+  index?: number;
   childCount: number;
   collapsed: boolean;
   canManage: boolean;
+  pending: boolean;
+  people: { id: string; name: string }[];
   showCollapse: boolean;
+  dragId?: string | null;
+  onDragId: (id: string | null) => void;
   onToggle: () => void;
   onEdit: () => void;
   onAdd: () => void;
+  onPlace: (seatId: string, parentId: string | null, index: number) => void;
+  onAssign: (personId: string) => void;
 }) {
-  const vacant = !seat.personId;
-  const personLabel = seat.personName ?? (seat.personId ? "Assigned user" : "Vacant");
+  const at = index ?? siblings.findIndex((item) => item.id === seat.id);
+  const personLabel = seat.personName ?? (seat.personId ? "Assigned user" : "Unassigned");
+  const known = !seat.personId || people.some((person) => person.id === seat.personId);
+  const eyebrow = seatLabelBody(seat.functionLabel);
+  function onKey(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!canManage || pending) return;
+    if (event.key === "ArrowUp" && at > 0) {
+      event.preventDefault();
+      onPlace(seat.id, seat.parentId, at - 1);
+    }
+    if (event.key === "ArrowDown" && at >= 0 && at < siblings.length - 1) {
+      event.preventDefault();
+      onPlace(seat.id, seat.parentId, at + 1);
+    }
+    if (event.key === "ArrowRight" && at > 0) {
+      event.preventDefault();
+      const previous = siblings[at - 1];
+      if (previous) onPlace(seat.id, previous.id, childCount);
+    }
+    if (event.key === "ArrowLeft" && seat.parentId) {
+      event.preventDefault();
+      const parent = siblings.find((item) => item.id === seat.parentId) ?? null;
+      onPlace(seat.id, parent?.parentId ?? null, at + 1);
+    }
+  }
   return (
-    <article className="seat-card">
-      <div className="spaced">
-        <span className="eyebrow">{seat.functionLabel}</span>
-        {canManage ? (
-          <button type="button" className="btn" aria-label={`Edit ${seat.title}`} onClick={onEdit}>
-            ✎
-          </button>
-        ) : null}
-      </div>
-      <h3>{seat.title}</h3>
-      <div className="seat-person">
-        <span className="seat-avatar">{vacant ? "?" : personLabel.slice(0, 1)}</span>
-        <span>{personLabel}</span>
-        {vacant ? <span className="pill warn">Open seat</span> : null}
-      </div>
-      <div className="kicker">
-        <span className="mini">ACCOUNTABILITIES</span>
-        <ul>
-          {seat.accountabilities.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </div>
+    <>
       {canManage ? (
-        <div className="spaced kicker">
-          <button type="button" className="btn" onClick={onAdd}>
-            + Seat below
-          </button>
-          {showCollapse ? (
-            <button type="button" className="btn" onClick={onToggle}>
-              {collapsed ? "Expand" : "Collapse"} ({childCount})
+        <div
+          className="seat-slot"
+          onDragOver={(event) => {
+            if (dragId) event.preventDefault();
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const seatId = event.dataTransfer.getData("text/plain") || dragId || "";
+            if (seatId && seatId !== seat.id) onPlace(seatId, seat.parentId, Math.max(0, at));
+          }}
+        >
+          <span className="sr-only">Drop before {seat.title}</span>
+        </div>
+      ) : null}
+      <article
+        className="seat-card"
+        onDragOver={(event) => {
+          if (canManage && dragId && dragId !== seat.id) event.preventDefault();
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const seatId = event.dataTransfer.getData("text/plain") || dragId || "";
+          if (seatId && seatId !== seat.id) onPlace(seatId, seat.id, childCount);
+        }}
+      >
+        <div className="spaced">
+          {canManage ? (
+            <button
+              type="button"
+              className="seat-handle"
+              draggable
+              aria-label={`Move ${seat.title}`}
+              aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+              onDragStart={(event) => {
+                event.dataTransfer.setData("text/plain", seat.id);
+                event.dataTransfer.effectAllowed = "move";
+                onDragId(seat.id);
+              }}
+              onDragEnd={() => onDragId(null)}
+              onKeyDown={onKey}
+            >
+              ⋮⋮
+            </button>
+          ) : (
+            <span />
+          )}
+          {canManage ? (
+            <button type="button" className="btn" aria-label={`Edit ${seat.title}`} onClick={onEdit}>
+              ✎
             </button>
           ) : null}
         </div>
-      ) : null}
-    </article>
+        {eyebrow && eyebrow !== seat.title ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h3>{seat.title}</h3>
+        <div className="seat-person">
+          <span className="seat-avatar">{seat.personId ? personLabel.slice(0, 1) : "?"}</span>
+          {canManage ? (
+            <select
+              aria-label={`Person in ${seat.title}`}
+              value={seat.personId ?? ""}
+              disabled={pending}
+              onChange={(event) => onAssign(event.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {!known && seat.personId ? <option value={seat.personId}>{personLabel}</option> : null}
+              {people.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span>{personLabel}</span>
+          )}
+        </div>
+        {seat.accountabilities.length > 0 ? (
+          <div className="kicker">
+            <span className="mini">ROLES</span>
+            <ul>
+              {seat.accountabilities.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {canManage ? (
+          <div className="spaced kicker">
+            <button type="button" className="btn" onClick={onAdd}>
+              + Seat below
+            </button>
+            {showCollapse ? (
+              <button type="button" className="btn" onClick={onToggle}>
+                {collapsed ? "Expand" : "Collapse"} ({childCount})
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </article>
+    </>
   );
 }
 
@@ -471,8 +686,6 @@ function SeatForm({
   onArchive: () => void;
   onClose: () => void;
 }) {
-  const blocked = new Set(draft.id ? [draft.id, ...descendantIds(seats, draft.id)] : []);
-  const parents = seats.filter((seat) => !blocked.has(seat.id));
   const children = draft.id ? seats.filter((seat) => seat.parentId === draft.id) : [];
   return (
     <form
@@ -482,51 +695,21 @@ function SeatForm({
         onSave();
       }}
     >
-      <h2>{draft.id ? "Edit seat" : "Add seat"}</h2>
-      <p className="mini">Define the function first, then assign one accountable person or leave the seat vacant.</p>
+      <h2>{draft.id ? "Edit seat" : "New Seat"}</h2>
       <label>
-        Seat title
-        <input value={draft.title} required onChange={(event) => onChange({ ...draft, title: event.target.value })} />
-      </label>
-      <label>
-        Function label
+        Seat Name
         <input
-          value={draft.functionLabel}
+          value={draft.title}
           required
-          onChange={(event) => onChange({ ...draft, functionLabel: event.target.value })}
+          autoFocus
+          onChange={(event) => onChange({ ...draft, title: event.target.value })}
         />
       </label>
-      <label>
-        Accountable person
-        <select value={draft.personId} onChange={(event) => onChange({ ...draft, personId: event.target.value })}>
-          <option value="">Vacant</option>
-          {people.map((person) => (
-            <option key={person.id} value={person.id}>
-              {person.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="mini">One person may hold more than one seat. This does not change their access.</p>
-      {draft.clearedAssignment ? (
-        <p className="mini">The stored assignment is not an eligible user. Saving leaves this seat vacant.</p>
-      ) : null}
-      <label>
-        Reports to
-        <select value={draft.parentId} onChange={(event) => onChange({ ...draft, parentId: event.target.value })}>
-          <option value="">Top seat</option>
-          {parents.map((seat) => (
-            <option key={seat.id} value={seat.id}>
-              {seat.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div>
-        <span className="mini">Essential accountabilities, one to five</span>
+      <details className="seat-fold">
+        <summary>Roles & Responsibilities</summary>
         {draft.accountabilities.map((item, index) => (
-          <label key={`accountability-${index}`}>
-            Accountability {index + 1}
+          <label key={`role-${index}`}>
+            Role {index + 1}
             <input
               value={item}
               onChange={(event) =>
@@ -540,33 +723,61 @@ function SeatForm({
             />
           </label>
         ))}
-        <div className="actions">
-          <button
-            type="button"
-            className="btn"
-            disabled={draft.accountabilities.length >= 5}
-            onClick={() => onChange({ ...draft, accountabilities: [...draft.accountabilities, ""] })}
-          >
-            Add accountability
-          </button>
-          {draft.accountabilities.length > 1 ? (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => onChange({ ...draft, accountabilities: draft.accountabilities.slice(0, -1) })}
-            >
-              Remove last
-            </button>
-          ) : null}
-        </div>
-      </div>
+        <button
+          type="button"
+          className="btn"
+          disabled={draft.accountabilities.length >= 5}
+          onClick={() => onChange({ ...draft, accountabilities: [...draft.accountabilities, ""] })}
+        >
+          Add role
+        </button>
+      </details>
+      <details className="seat-fold">
+        <summary>Attachments</summary>
+        {draft.attachments.map((item, index) => (
+          <label key={`attachment-${index}`}>
+            Attachment {index + 1}
+            <input
+              value={item}
+              onChange={(event) =>
+                onChange({
+                  ...draft,
+                  attachments: draft.attachments.map((current, itemIndex) =>
+                    itemIndex === index ? event.target.value : current
+                  ),
+                })
+              }
+            />
+          </label>
+        ))}
+        <button
+          type="button"
+          className="btn"
+          onClick={() => onChange({ ...draft, attachments: [...draft.attachments, ""] })}
+        >
+          Add attachment
+        </button>
+      </details>
+      {draft.id ? (
+        <label>
+          Person
+          <select value={draft.personId} onChange={(event) => onChange({ ...draft, personId: event.target.value })}>
+            <option value="">Unassigned</option>
+            {people.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       {formError ? <p className="mini">{formError}</p> : null}
       <div className="actions">
-        <button type="submit" className="btn primary" disabled={pending}>
-          {pending ? "Saving…" : "Save seat"}
-        </button>
         <button type="button" className="btn" onClick={onClose}>
-          Close / Cancel
+          Cancel
+        </button>
+        <button type="submit" className="btn primary" disabled={pending}>
+          {pending ? "Saving…" : draft.id ? "Save seat" : "Create Seat"}
         </button>
       </div>
       {draft.id ? (

@@ -12,6 +12,8 @@ import {
   givingAllowedForTeam,
   keepSavedVersion,
   parentChoiceAllowed,
+  placeSeat,
+  pulseWorkspaceAccess,
   parseSectionContent,
   planningAccess,
   planningWriteAllowed,
@@ -253,6 +255,22 @@ test("seat reparenting rejects cycles", () => {
   assert.equal(parentChoiceAllowed(seats, "a", "c").ok, false);
   assert.equal(parentChoiceAllowed(seats, "c", "missing").ok, false);
   assert.equal(parentChoiceAllowed(seats, "new-seat", "b").ok, true);
+});
+
+test("dragging a seat reparents without dropping the others", () => {
+  const seats: SeatNode[] = [seat("a", null), seat("b", null), seat("c", "a")];
+  const underB = placeSeat(seats, "c", "b", 0);
+  assert.equal(underB.ok, true);
+  if (!underB.ok) return;
+  assert.equal(underB.updates.find((item) => item.id === "c")?.parentId, "b");
+  const cycle = placeSeat(seats, "a", "c", 0);
+  assert.equal(cycle.ok, false);
+});
+
+test("an admin without a meeting can open settings only", () => {
+  assert.equal(pulseWorkspaceAccess({ isAdmin: true, teamCount: 0 }), "admin-only");
+  assert.equal(pulseWorkspaceAccess({ isAdmin: false, teamCount: 0 }), "denied");
+  assert.equal(pulseWorkspaceAccess({ isAdmin: true, teamCount: 2 }), "workspace");
 });
 
 test("a seat person must be chosen from eligible users", () => {

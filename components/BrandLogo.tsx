@@ -6,6 +6,7 @@ type BrandLogoProps = {
   href?: string | null;
   size?: "sm" | "md";
   variant?: "default" | "light";
+  stack?: boolean;
 };
 
 export function BrandLogo({
@@ -13,11 +14,14 @@ export function BrandLogo({
   href = "/dashboard",
   size = "md",
   variant = "default",
+  stack = false,
 }: BrandLogoProps) {
   const iconSize = size === "sm" ? 32 : 40;
   const titleClass =
     variant === "light"
-      ? "sfdc-logo-text truncate"
+      ? stack
+        ? "sfdc-logo-text pulse-wordmark"
+        : "sfdc-logo-text truncate"
       : `navbar-logo-text font-bold tracking-tight truncate ${
           size === "sm" ? "text-sm" : "text-base"
         }`;
@@ -29,7 +33,7 @@ export function BrandLogo({
       <div className="shrink-0 rounded-md bg-white p-1 shadow-sm ring-1 ring-black/5">
         <Image
           src="/brand/cc-icon.png"
-          alt="Community Church"
+          alt=""
           width={iconSize}
           height={iconSize}
           className="rounded-sm"
@@ -37,7 +41,14 @@ export function BrandLogo({
         />
       </div>
       <div className="min-w-0 leading-tight">
-        <p className={titleClass}>Community Church</p>
+        {stack ? (
+          <p className={titleClass}>
+            <span>Community</span>
+            <span>Church</span>
+          </p>
+        ) : (
+          <p className={titleClass}>Community Church</p>
+        )}
         {showSubtitle && <p className={subtitleClass}>Ministry dashboard</p>}
       </div>
     </div>
@@ -45,7 +56,7 @@ export function BrandLogo({
 
   if (href) {
     return (
-      <Link href={href} className="hover:opacity-90 transition-opacity">
+      <Link href={href} className={stack ? "pulse-brand hover:opacity-90 transition-opacity" : "hover:opacity-90 transition-opacity"}>
         {content}
       </Link>
     );

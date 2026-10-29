@@ -795,7 +795,7 @@ function ReviewRows({
         </td>
         <td>{formatTargetDisplay(row.target, row.unit)}</td>
         <td>
-          <span className={statusPill(row.status.key)}>{row.status.label}</span>
+          {row.status.key === "stale" ? null : <span className={statusPill(row.status.key)}>{row.status.label}</span>}
           {row.status.key === "manual" ? (
             <details>
               <summary>Details</summary>

@@ -499,20 +499,82 @@ button.welcome-admin {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pulse-shell > aside > div {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .pulse .navlabel {
   color: #91b4b8;
   margin: 0 10px 8px;
   font-size: 10px;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-transform: none;
   font-weight: 750;
+}
+
+.pulse .pulse-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  line-height: 1.15;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.pulse .pulse-wordmark span {
+  display: block;
+}
+
+.pulse a.pulse-brand {
+  display: block;
+  max-width: 100%;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.pulse a.pulse-brand:focus-visible {
+  outline: 3px solid #237d72;
+  outline-offset: 3px;
 }
 
 .pulse nav {
   display: grid;
   gap: 4px;
+}
+
+.pulse .admin-side {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 4px;
+}
+
+.pulse .admin-side a {
+  color: #f3f6f5;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.pulse .admin-side a:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pulse .admin-side a:focus-visible {
+  outline: 3px solid #237d72;
+  outline-offset: 2px;
 }
 
 .pulse nav .nav-rule {
@@ -558,7 +620,8 @@ button.welcome-admin {
 .pulse .foot {
   margin-top: auto;
   color: #afc7ca;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .pulse .top {
@@ -583,13 +646,14 @@ button.welcome-admin {
 }
 
 .pulse .banner {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border: 1px solid #eadbbd;
   background: #fff8eb;
   border-radius: 8px;
   color: #795c29;
-  font-size: 12px;
-  margin-bottom: 23px;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 22px;
 }
 
 .pulse .notice {
@@ -712,6 +776,7 @@ button.welcome-admin {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+  width: 100%;
 }
 
 .pulse .card {
@@ -723,7 +788,7 @@ button.welcome-admin {
   height: auto;
   min-height: 0;
   max-height: none;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   padding: 20px;
   background: white;
@@ -731,6 +796,7 @@ button.welcome-admin {
   border-radius: 11px;
   min-width: 0;
   box-shadow: none;
+  box-sizing: border-box;
 }
 
 .pulse .card :where(p) {
@@ -758,9 +824,10 @@ button.welcome-admin {
 
 .pulse .twocol {
   display: grid;
-  grid-template-columns: 1.5fr minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 17px;
   margin-top: 17px;
+  width: 100%;
 }
 
 .pulse .three {
@@ -768,13 +835,15 @@ button.welcome-admin {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 15px;
   margin-top: 17px;
+  width: 100%;
 }
 
 .pulse .meeting {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 17px;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
+  width: 100%;
   height: auto;
 }
 
@@ -796,7 +865,7 @@ button.welcome-admin {
 .pulse .insight-list > * {
   position: static;
   grid-area: auto;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   height: auto;
   min-height: 0;
@@ -804,11 +873,28 @@ button.welcome-admin {
   z-index: auto;
 }
 
+.pulse .stack > .card,
+.pulse .strategy-swot > .card,
+.pulse .vision-layout > .card {
+  align-self: stretch;
+  width: 100%;
+}
+
+.pulse .card .spaced h2 {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
 .pulse .meeting > .stack {
-  align-self: start;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  gap: 16px;
 }
 
 .pulse .meeting .card {
+  align-self: stretch;
+  width: 100%;
   height: auto;
   min-height: 0;
   flex: 0 0 auto;
@@ -1037,17 +1123,25 @@ button.welcome-admin {
   background-image: none;
   box-shadow: none;
   color: var(--ink);
-  padding: 11px;
+  padding: 10px 12px;
   text-align: left;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
   border-radius: 6px;
   width: 100%;
   height: auto;
   min-height: 0;
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.4;
+}
+
+.pulse .agenda button span:last-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .pulse .agenda button.active {
@@ -1223,6 +1317,40 @@ button.welcome-admin {
 
 .pulse .todo-board-head h2 {
   margin: 0;
+  color: #102d39;
+}
+
+.pulse .todo-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 4px 0 12px;
+}
+
+.pulse .todo-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 11rem;
+  color: #102d39;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pulse .todo-filters select {
+  width: 100%;
+  color: #102d39;
+}
+
+.pulse .mine-list {
+  margin: 8px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.pulse .mine-list li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
   color: #102d39;
 }
 
@@ -1524,7 +1652,12 @@ button.welcome-admin {
   font-weight: 750;
 }
 
+.pulse .issue-sheet {
+  width: 100%;
+}
+
 .pulse table.issue-list {
+  width: 100%;
   font-size: 14px;
 }
 

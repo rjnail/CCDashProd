@@ -21,8 +21,6 @@ import { ownerChoice } from "@/lib/os/owners";
 import { OS_TEAM_LABELS } from "@/lib/os/types";
 import type { OsMeasure, OsPageData, OsWorkItem } from "@/lib/os/types";
 
-type Tab = "open" | "long_term";
-
 type Draft = {
   rootIssue: string;
   neededDecision: string;
@@ -34,7 +32,6 @@ const PRIORITIES = [0, 1, 2, 3] as const;
 export function IssueBoard({ data }: { data: OsPageData }) {
   const router = useRouter();
   const issues = data.items.filter((item) => item.kind === "issue");
-  const [tab, setTab] = useState<Tab>("open");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [solveId, setSolveId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -54,8 +51,7 @@ export function IssueBoard({ data }: { data: OsPageData }) {
   const openRows = issues.filter((issue) => listBucket(issue.issueStatus) === "open").sort(byOrder);
   const solvedRows = issues.filter((issue) => listBucket(issue.issueStatus) === "solved").sort(byOrder);
   const longRows = issues.filter((issue) => listBucket(issue.issueStatus) === "long_term").sort(byOrder);
-  const rows = tab === "open" ? [...openRows, ...solvedRows] : longRows;
-  const tabLabel = tab === "open" ? "Short-term" : "Long-term";
+  const rows = [...openRows, ...longRows, ...solvedRows];
 
   function draftFor(issue: OsWorkItem): Draft {
     return drafts[issue.id] ?? draftFrom(issue);
@@ -146,36 +142,15 @@ export function IssueBoard({ data }: { data: OsPageData }) {
           <div className="sub">Keep the issue, decision, and resulting commitment connected.</div>
         </div>
       </div>
-      <div className="issue-tabs" role="tablist" aria-label="Issue lists">
-        {(
-          [
-            ["open", "Short-term"],
-            ["long_term", "Long-term"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => {
-              setTab(id);
-              setExpandedId(null);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <section className="card issue-sheet" aria-label={`${tabLabel} issues`}>
+      <section className="card issue-sheet" aria-label="Issues">
         <div className="issue-sheet-head">
-          <h2>{tabLabel}</h2>
+          <h2>Issues</h2>
           <span className="issue-count">{rows.length}</span>
         </div>
         <div className="tablewrap">
           <table className="issue-list">
             <caption className="sr-only">
-              {tabLabel} issues. Check a row to solve it. Choose a title to read and add notes.
+              Issues. Check a row to solve it. Choose a title to read and add notes.
             </caption>
             <thead>
               <tr>
@@ -202,7 +177,7 @@ export function IssueBoard({ data }: { data: OsPageData }) {
                 rows.map((issue, index) => {
                   const openIndex = openRows.findIndex((item) => item.id === issue.id);
                   const longIndex = longRows.findIndex((item) => item.id === issue.id);
-                  const draggable = data.canFacilitate && tab === "open" && openIndex >= 0;
+                  const draggable = data.canFacilitate && (openIndex >= 0 || longIndex >= 0);
                   return (
                     <IssueRow
                       key={issue.id}

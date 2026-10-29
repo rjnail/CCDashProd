@@ -13,9 +13,16 @@
 
 .pulse .vision-layout {
   display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
+  width: 100%;
+}
+
+.pulse .vision-layout > .stack,
+.pulse .vision-layout > .card {
+  min-width: 0;
+  width: 100%;
 }
 
 .pulse .vision-copy p {
@@ -25,8 +32,9 @@
 
 .pulse .strategy-swot {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
 }
 
 .pulse .plan-fields label,
@@ -199,6 +207,41 @@
 
 .pulse .seat-directory .seat-card {
   width: 100%;
+}
+
+.pulse .seat-handle {
+  border: 0;
+  background: transparent;
+  color: #102d39;
+  cursor: grab;
+  font-weight: 800;
+  letter-spacing: -1px;
+  padding: 4px 6px;
+}
+
+.pulse .seat-handle:focus-visible {
+  outline: 3px solid #237d72;
+  outline-offset: 2px;
+}
+
+.pulse .seat-slot {
+  height: 10px;
+  margin: 0 8px;
+}
+
+.pulse .seat-fold {
+  margin: 10px 0;
+  color: #102d39;
+}
+
+.pulse .seat-fold summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.pulse .seat-card select {
+  color: #102d39;
+  max-width: 12rem;
 }
 
 @media (max-width: 950px) {

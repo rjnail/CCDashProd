@@ -64,15 +64,48 @@ function TodoList({
 }) {
   const today = todayIso();
   const rows = orderedTodos(items);
-  const openCount = rows.filter((item) => item.rockStatus !== "complete").length;
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const visible = rows.filter(
+    (item) => matchesDueFilter(item, dueFilter, today) && matchesOwnerFilter(item, ownerFilter)
+  );
+  const openCount = visible.filter((item) => item.rockStatus !== "complete").length;
+  const filtered = dueFilter !== "all" || ownerFilter !== "all";
 
   return (
-    <section className="card todo-board" aria-label="To-dos">
+    <section className="card todo-board" aria-label="To-Do's">
       <div className="todo-board-head">
-        <h2>To-dos</h2>
-        <span className="todo-count" aria-label={`${rows.length} to-dos, ${openCount} open`}>
-          {rows.length}
+        <h2>To-Do's</h2>
+        <span className="todo-count" aria-label={`${visible.length} to-dos shown, ${openCount} open`}>
+          {visible.length}
         </span>
+      </div>
+      <div className="todo-filters">
+        <label>
+          Due date
+          <select
+            aria-label="Filter by due date"
+            value={dueFilter}
+            onChange={(event) => setDueFilter(event.target.value as DueFilter)}
+          >
+            <option value="all">All</option>
+            <option value="overdue">Overdue</option>
+            <option value="week">Due this week</option>
+            <option value="none">No due date</option>
+          </select>
+        </label>
+        <label>
+          Owner
+          <select aria-label="Filter by owner" value={ownerFilter} onChange={(event) => setOwnerFilter(event.target.value)}>
+            <option value="all">All</option>
+            <option value="unassigned">Unassigned</option>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <div className="tablewrap">
         <table className="todo-list">
@@ -88,14 +121,14 @@ function TodoList({
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {visible.length === 0 ? (
               <tr>
                 <td colSpan={4}>
-                  <p className="mini">{empty}</p>
+                  <p className="mini">{filtered ? "No to-dos match these filters." : empty}</p>
                 </td>
               </tr>
             ) : (
-              rows.map((item) => (
+              visible.map((item) => (
                 <TodoRow key={item.id} team={team} item={item} members={members} canEdit={canEdit} today={today} />
               ))
             )}
@@ -356,6 +389,40 @@ function AddTodo({
       ) : null}
     </form>
   );
+}
+
+type DueFilter = "all" | "overdue" | "week" | "none";
+
+function matchesOwnerFilter(item: OsWorkItem, ownerFilter: string): boolean {
+  if (ownerFilter === "all") return true;
+  if (ownerFilter === "unassigned") return !item.ownerUserId;
+  return item.ownerUserId === ownerFilter;
+}
+
+function matchesDueFilter(item: OsWorkItem, dueFilter: DueFilter, today: string): boolean {
+  if (dueFilter === "all") return true;
+  const key = dueKey(item.dueOn);
+  if (dueFilter === "none") return key == null;
+  const closed = item.rockStatus === "complete";
+  if (dueFilter === "overdue") return isOverdue(item.dueOn, closed, today);
+  if (!key) return false;
+  const bounds = weekBounds(today);
+  return key >= bounds.start && key <= bounds.end;
+}
+
+function weekBounds(today: string): { start: string; end: string } {
+  const date = new Date(`${today}T12:00:00`);
+  const start = new Date(date);
+  start.setDate(date.getDate() - date.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start: isoDate(start), end: isoDate(end) };
+}
+
+function isoDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function orderedTodos(items: readonly OsWorkItem[]): OsWorkItem[] {
