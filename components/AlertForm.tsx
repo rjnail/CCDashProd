@@ -48,14 +48,14 @@ export function AlertForm({ metrics, campuses }: AlertFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card bg-base-100 border border-base-300 shadow-sm">
-      <div className="card-body gap-4">
-        <h2 className="card-title text-lg">Add alert threshold</h2>
+    <form onSubmit={handleSubmit} className="welcome-card">
+      <h2>Add alert threshold</h2>
+      <p>Thresholds that surface on the dashboard concerns panel.</p>
 
-        <label className="form-control">
-          <span className="label-text">Metric</span>
+      <div className="welcome-fields">
+        <label className="welcome-field">
+          <span>Metric</span>
           <select
-            className="select select-bordered"
             value={metricId}
             onChange={(e) => setMetricId(e.target.value)}
             required
@@ -68,10 +68,9 @@ export function AlertForm({ metrics, campuses }: AlertFormProps) {
           </select>
         </label>
 
-        <label className="form-control">
-          <span className="label-text">Campus (optional)</span>
+        <label className="welcome-field">
+          <span>Campus (optional)</span>
           <select
-            className="select select-bordered"
             value={campusId}
             onChange={(e) => setCampusId(e.target.value)}
           >
@@ -84,12 +83,11 @@ export function AlertForm({ metrics, campuses }: AlertFormProps) {
           </select>
         </label>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="form-control">
-            <span className="label-text">Threshold (%)</span>
+        <div className="welcome-fields welcome-fields-2">
+          <label className="welcome-field">
+            <span>Threshold (%)</span>
             <input
               type="number"
-              className="input input-bordered"
               value={dropPercent}
               min={1}
               max={100}
@@ -97,11 +95,10 @@ export function AlertForm({ metrics, campuses }: AlertFormProps) {
               required
             />
           </label>
-          <label className="form-control">
-            <span className="label-text">Over months</span>
+          <label className="welcome-field">
+            <span>Over months</span>
             <input
               type="number"
-              className="input input-bordered"
               value={monthsWindow}
               min={1}
               max={24}
@@ -111,21 +108,22 @@ export function AlertForm({ metrics, campuses }: AlertFormProps) {
           </label>
         </div>
 
-        <label className="form-control">
-          <span className="label-text">Label (optional)</span>
+        <label className="welcome-field">
+          <span>Label (optional)</span>
           <input
             type="text"
-            className="input input-bordered"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="e.g. Attendance drop at Alma"
           />
         </label>
+      </div>
 
-        {error && <div className="alert alert-error text-sm">{error}</div>}
-        {message && <div className="alert alert-success text-sm">{message}</div>}
+      {error && <div className="welcome-note welcome-note-bad">{error}</div>}
+      {message && <div className="welcome-note welcome-note-ok">{message}</div>}
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
+      <div className="welcome-actions">
+        <button type="submit" className="welcome-admin" disabled={loading}>
           {loading ? "Saving…" : "Add threshold"}
         </button>
       </div>

@@ -1,11 +1,13 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { BrandLogo } from "@/components/BrandLogo";
 import { DataSyncPanel } from "@/components/DataSyncPanel";
-import { Navbar } from "@/components/Navbar";
 import { UserCreateForm } from "@/components/UserCreateForm";
 import { UserList } from "@/components/UserList";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { loadPulseMeetings } from "@/lib/os/pulse-admin";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import "@/components/os/shell.css";
 import {
   ALL_CAMPUS_ACCESS,
   ALL_EXPENSE_SCOPES,
@@ -13,21 +15,25 @@ import {
   normalizeUserProfile,
 } from "@/lib/permissions";
 import { getUserProfile } from "@/lib/metrics";
-import type { ManagedUser, UserProfile } from "@/lib/types";
+import type { ManagedUser } from "@/lib/types";
 import { queryAllUserProfileRows } from "@/lib/user-profile";
 
-async function getManagedUsers(): Promise<ManagedUser[]> {
+async function getManagedUsers(): Promise<{
+  users: ManagedUser[];
+  meetingsWarning: string | null;
+}> {
   const admin = createAdminClient();
-  const [{ data: authData }, profiles] = await Promise.all([
+  const [{ data: authData }, profiles, meetings] = await Promise.all([
     admin.auth.admin.listUsers({ perPage: 200 }),
     queryAllUserProfileRows(admin),
+    loadPulseMeetings(),
   ]);
 
   const profileById = new Map(
     profiles.map((row) => [row.id, normalizeUserProfile(row)])
   );
 
-  return (authData?.users ?? [])
+  const users = (authData?.users ?? [])
     .map((user) => {
       const existing = profileById.get(user.id);
       const profile = existing ? normalizeUserProfile(existing) : null;
@@ -53,9 +59,12 @@ async function getManagedUsers(): Promise<ManagedUser[]> {
         can_edit_benchmarks: profile?.can_edit_benchmarks ?? false,
         can_access_chms: profile?.can_access_chms ?? true,
         can_manage_chms_processes: profile?.can_manage_chms_processes ?? false,
+        pulseTeams: meetings.byUser.get(user.id) ?? [],
       };
     })
     .sort((a, b) => a.email.localeCompare(b.email));
+
+  return { users, meetingsWarning: meetings.warning };
 }
 
 export default async function UsersSettingsPage() {
@@ -67,9 +76,12 @@ export default async function UsersSettingsPage() {
 
   let users: ManagedUser[] = [];
   let loadError: string | null = null;
+  let meetingsWarning: string | null = null;
 
   try {
-    users = await getManagedUsers();
+    const loaded = await getManagedUsers();
+    users = loaded.users;
+    meetingsWarning = loaded.meetingsWarning;
   } catch (err) {
     loadError =
       err instanceof Error
@@ -78,38 +90,35 @@ export default async function UsersSettingsPage() {
   }
 
   return (
-    <>
-      <Navbar profile={profile} />
-      <main className="mx-auto w-full max-w-4xl p-4 md:p-8 space-y-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Users</h1>
-            <p className="text-sm text-base-content/70">
-              Create staff accounts and control which dashboard pages each person
-              can view, plus benchmark editing access.
-            </p>
-          </div>
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            Back to dashboard
-          </Link>
-        </div>
-
-        <DataSyncPanel />
-
-        {loadError ? (
-          <div className="alert alert-warning text-sm">{loadError}</div>
-        ) : (
-          <>
-            <UserCreateForm />
-            <div className="card bg-base-100 border border-base-300 shadow-sm">
-              <div className="card-body">
-                <h2 className="card-title text-lg">All users</h2>
+    <main className="welcome welcome-page">
+      <div className="welcome-inner">
+        <BrandLogo href={null} showSubtitle={false} />
+        <h1>Users</h1>
+        <p>
+          Create staff accounts and control which dashboard pages each person
+          can view, plus benchmark editing and Pulse meeting access.
+        </p>
+        <div className="welcome-stack">
+          <DataSyncPanel />
+          {meetingsWarning && (
+            <div className="welcome-note">{meetingsWarning}</div>
+          )}
+          {loadError ? (
+            <div className="welcome-note">{loadError}</div>
+          ) : (
+            <>
+              <UserCreateForm />
+              <section className="welcome-card">
+                <h2>All users</h2>
                 <UserList users={users} />
-              </div>
-            </div>
-          </>
-        )}
-      </main>
-    </>
+              </section>
+            </>
+          )}
+        </div>
+        <Link href="/settings" className="welcome-back">
+          Back to admin settings
+        </Link>
+      </div>
+    </main>
   );
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserManager } from "@/lib/admin-auth";
+import { parseMeetingList } from "@/lib/os/pulse-db";
+import { syncPulseMeetings } from "@/lib/os/pulse-admin";
 import {
   ADMIN_PERMISSIONS,
   ALL_CAMPUS_ACCESS,
@@ -9,11 +11,13 @@ import {
 } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { UserProfile } from "@/lib/types";
+import { updateUserProfileRow } from "@/lib/user-profile";
 
 type UpdateUserBody = {
   displayName?: string;
   role?: "staff" | "admin";
   permissions?: Partial<UserProfile>;
+  meetings?: unknown;
 };
 
 export async function PATCH(
@@ -132,14 +136,7 @@ export async function PATCH(
       }
     }
 
-    const { data, error: updateError } = await admin
-      .from("user_profiles")
-      .update(updates)
-      .eq("id", id)
-      .select(
-        "id, display_name, role, financial_insights, can_view_overview, can_view_adult_discipleship, can_view_next_gen, can_view_weekend_reach, can_view_operations, can_view_monthly_expenses, monthly_expenses_scope, can_view_volunteer_matrix, campus_access, can_edit_benchmarks, can_access_chms, can_manage_chms_processes"
-      )
-      .single();
+    const { data, error: updateError } = await updateUserProfileRow(admin, id, updates);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -151,7 +148,20 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ user: data });
+    let meetingsWarning: string | null = null;
+    if (body.meetings !== undefined) {
+      const meetings = parseMeetingList(body.meetings);
+      if (!meetings.ok) {
+        return NextResponse.json({ error: "Unknown meeting selection" }, { status: 400 });
+      }
+      const synced = await syncPulseMeetings(id, meetings.teams);
+      meetingsWarning = synced.ok ? null : synced.error;
+    }
+
+    return NextResponse.json({
+      user: data,
+      meetingsWarning,
+    });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to update user";

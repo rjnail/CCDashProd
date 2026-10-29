@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserManager } from "@/lib/admin-auth";
+import { loadPulseMeetings, syncPulseMeetings } from "@/lib/os/pulse-admin";
+import { parseMeetingList } from "@/lib/os/pulse-db";
 import {
   ADMIN_PERMISSIONS,
   ALL_CAMPUS_ACCESS,
@@ -10,7 +12,7 @@ import {
 } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ManagedUser, UserProfile } from "@/lib/types";
-import { queryAllUserProfileRows } from "@/lib/user-profile";
+import { queryAllUserProfileRows, updateUserProfileRow } from "@/lib/user-profile";
 
 type CreateUserBody = {
   email: string;
@@ -18,6 +20,7 @@ type CreateUserBody = {
   displayName?: string;
   role?: "staff" | "admin";
   permissions?: Partial<UserProfile>;
+  meetings?: unknown;
 };
 
 function buildPermissionPayload(
@@ -69,9 +72,10 @@ export async function GET() {
 
   try {
     const admin = createAdminClient();
-    const [{ data: authData, error: listError }, profiles] = await Promise.all([
+    const [{ data: authData, error: listError }, profiles, meetings] = await Promise.all([
       admin.auth.admin.listUsers({ perPage: 200 }),
       queryAllUserProfileRows(admin),
+      loadPulseMeetings(),
     ]);
 
     if (listError) {
@@ -112,12 +116,13 @@ export async function GET() {
         can_edit_benchmarks: existing?.can_edit_benchmarks ?? false,
         can_access_chms: existing?.can_access_chms ?? true,
         can_manage_chms_processes: existing?.can_manage_chms_processes ?? false,
+        pulseTeams: meetings.byUser.get(user.id) ?? [],
       };
     });
 
     users.sort((a, b) => a.email.localeCompare(b.email));
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ users, meetingsWarning: meetings.warning });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load users";
@@ -154,6 +159,11 @@ export async function POST(request: Request) {
       { error: "Password must be at least 6 characters" },
       { status: 400 }
     );
+  }
+
+  const meetings = parseMeetingList(body.meetings ?? []);
+  if (!meetings.ok) {
+    return NextResponse.json({ error: "Unknown meeting selection" }, { status: 400 });
   }
 
   const permissionPayload = buildPermissionPayload(role, body.permissions);
@@ -194,15 +204,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: profileError } = await admin
-      .from("user_profiles")
-      .update({
-        display_name: displayName,
-        role,
-        ...permissionPayload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", created.user.id);
+    const { error: profileError } = await updateUserProfileRow(admin, created.user.id, {
+      display_name: displayName,
+      role,
+      ...permissionPayload,
+      updated_at: new Date().toISOString(),
+    });
 
     if (profileError) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
@@ -216,6 +223,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: prefsError.message }, { status: 500 });
     }
 
+    const synced = await syncPulseMeetings(created.user.id, meetings.teams);
+
     return NextResponse.json({
       user: {
         id: created.user.id,
@@ -223,7 +232,9 @@ export async function POST(request: Request) {
         display_name: displayName,
         role,
         ...permissionPayload,
+        pulseTeams: synced.ok ? meetings.teams : [],
       },
+      meetingsWarning: synced.ok ? null : synced.error,
     });
   } catch (err) {
     const message =

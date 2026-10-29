@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  canEditBenchmarks,
-  canManageUsers,
   canViewMonthlyExpenses,
   canViewVolunteerMatrix,
   isAdmin,
@@ -76,24 +74,12 @@ export function Navbar({ profile }: NavbarProps) {
             />
           </div>
           <div className="sfdc-global-actions">
-            {profile && canEditBenchmarks(profile) && (
-              <Link href="/settings/benchmarks" className="sfdc-global-link">
-                Benchmarks
-              </Link>
-            )}
-            {profile && isAdmin(profile) && (
-              <Link href="/settings/alerts" className="sfdc-global-link">
-                Alerts
-              </Link>
-            )}
+            <Link href="/" className="sfdc-global-link">
+              Home
+            </Link>
             {profile && isAdmin(profile) && (
               <Link href="/settings/feedback" className="sfdc-global-link">
                 Feedback
-              </Link>
-            )}
-            {profile && canManageUsers(profile) && (
-              <Link href="/settings/users" className="sfdc-global-link">
-                Users
               </Link>
             )}
             <div className="dropdown dropdown-end">

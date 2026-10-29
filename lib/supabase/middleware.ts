@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CHMS_ENABLED, isChmsPath } from "@/lib/feature-flags";
 import { isLocalPos } from "@/lib/pos/config";
+import { safeNextPath } from "@/lib/safe-next";
 
 export async function updateSession(request: NextRequest) {
   if (isLocalPos()) {
@@ -48,23 +49,30 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const path = request.nextUrl.pathname;
   const isProtected =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/volunteer-matrix") ||
-    (CHMS_ENABLED && request.nextUrl.pathname.startsWith("/chms")) ||
-    request.nextUrl.pathname.startsWith("/settings") ||
-    request.nextUrl.pathname.startsWith("/pos");
+    path === "/" ||
+    path.startsWith("/dashboard") ||
+    path.startsWith("/volunteer-matrix") ||
+    path.startsWith("/monthly-expenses") ||
+    path.startsWith("/pulse") ||
+    (CHMS_ENABLED && path.startsWith("/chms")) ||
+    path.startsWith("/settings") ||
+    path.startsWith("/pos");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
+    const next = safeNextPath(path + request.nextUrl.search);
     url.pathname = "/login";
+    url.search = "";
+    if (next && next !== "/") url.searchParams.set("next", next);
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = isLocalPos() ? "/pos" : "/dashboard";
-    return NextResponse.redirect(url);
+    const next = safeNextPath(request.nextUrl.searchParams.get("next"));
+    const destination = isLocalPos() ? "/pos" : next ?? "/";
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return supabaseResponse;

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:os": "node --experimental-strip-types --import ./scripts/os-test-register.mjs --test lib/os/rules.test.ts lib/os/ids.test.ts lib/os/tangent.test.ts lib/os/owners.test.ts lib/os/scorecard.test.ts lib/os/conclude.test.ts lib/os/planning.test.ts lib/safe-next.test.ts"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.6.0",

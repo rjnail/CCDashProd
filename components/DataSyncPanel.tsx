@@ -96,55 +96,55 @@ export function DataSyncPanel() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-box border border-base-300 bg-base-100 p-4">
-        <h2 className="text-lg font-semibold">Sunday attendance sync</h2>
-        <p className="mt-1 text-sm text-base-content/70">
+    <>
+      <section className="welcome-card">
+        <h2>Sunday attendance sync</h2>
+        <p>
           Pulls from the attendance Google Sheet. Auto-runs every Tuesday at
           2:00 PM Eastern when deployed to Vercel.
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="welcome-actions">
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="welcome-admin"
             onClick={syncAttendance}
             disabled={attendanceLoading || givingLoading}
           >
             {attendanceLoading ? "Syncing…" : "Sync attendance"}
           </button>
           {attendanceMessage && (
-            <p className="text-sm text-success">{attendanceMessage}</p>
+            <p className="welcome-status welcome-status-ok">{attendanceMessage}</p>
           )}
           {attendanceError && (
-            <p className="text-sm text-error">{attendanceError}</p>
+            <p className="welcome-status welcome-status-bad">{attendanceError}</p>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-box border border-base-300 bg-base-100 p-4">
-        <h2 className="text-lg font-semibold">Giving & expenses sync</h2>
-        <p className="mt-1 text-sm text-base-content/70">
+      <section className="welcome-card">
+        <h2>Giving & expenses sync</h2>
+        <p>
           Pulls monthly giving, giving households, general fund expenses, and
           campus giving from the stewardship Google Sheet. Auto-runs on the
           Monday before the second Tuesday of each month (after reconciliation).
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="welcome-actions">
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="welcome-admin"
             onClick={syncGiving}
             disabled={attendanceLoading || givingLoading}
           >
             {givingLoading ? "Syncing…" : "Sync giving"}
           </button>
           {givingMessage && (
-            <p className="text-sm text-success">{givingMessage}</p>
+            <p className="welcome-status welcome-status-ok">{givingMessage}</p>
           )}
           {givingError && (
-            <p className="text-sm text-error">{givingError}</p>
+            <p className="welcome-status welcome-status-bad">{givingError}</p>
           )}
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   );
 }
