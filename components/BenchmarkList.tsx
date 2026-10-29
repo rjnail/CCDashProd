@@ -28,20 +28,14 @@ export function BenchmarkList({
   }
 
   if (benchmarks.length === 0) {
-    return (
-      <p className="text-sm text-base-content/60">
-        No benchmarks configured yet.
-      </p>
-    );
+    return <p>No benchmarks configured yet.</p>;
   }
 
   return (
     <>
-      <p className="text-sm text-base-content/60 mb-3">
-        Click a row to edit.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="table table-sm">
+      <p>Click a row to edit.</p>
+      <div className="welcome-tablewrap">
+        <table className="welcome-table">
           <thead>
             <tr>
               <th>Metric</th>
@@ -56,7 +50,6 @@ export function BenchmarkList({
             {benchmarks.map((b) => (
               <tr
                 key={b.id}
-                className="hover:bg-base-200 cursor-pointer transition-colors"
                 onClick={() => openEdit(b)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -83,7 +76,7 @@ export function BenchmarkList({
                     ? formatValue(b.stretch_value, b.metric.unit)
                     : "—"}
                 </td>
-                <td className="text-base-content/70">{b.label ?? "—"}</td>
+                <td className="welcome-muted">{b.label ?? "—"}</td>
               </tr>
             ))}
           </tbody>

@@ -1,0 +1,209 @@
+.pulse .plan-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.pulse .plan-tabs .active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+.pulse .vision-layout {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.pulse .vision-copy p {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+}
+
+.pulse .strategy-swot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.pulse .plan-fields label,
+.pulse .plan-dialog label {
+  display: block;
+  margin: 12px 0;
+}
+
+.pulse .plan-fields input,
+.pulse .plan-fields select,
+.pulse .plan-fields textarea,
+.pulse .plan-dialog input,
+.pulse .plan-dialog select,
+.pulse .plan-dialog textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.pulse .plan-dialog textarea {
+  min-height: 90px;
+}
+
+.pulse .chart-viewport {
+  overflow: auto;
+  max-height: 800px;
+  min-height: 540px;
+  padding: 30px 12px;
+  background: #f8faf9;
+  border: 1px solid #e1e9e5;
+  border-radius: 9px;
+  margin-top: 22px;
+}
+
+.pulse .chart-scale {
+  width: max-content;
+  min-width: 100%;
+}
+
+.pulse .seat-tree,
+.pulse .seat-tree ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.pulse .seat-tree ul {
+  padding-top: 35px;
+}
+
+.pulse .seat-tree li {
+  text-align: center;
+  position: relative;
+  padding: 0 12px;
+}
+
+.pulse .seat-tree ul > li::before {
+  content: "";
+  position: absolute;
+  top: -18px;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #9eb7ae;
+}
+
+.pulse .seat-tree ul > li:first-child::before {
+  left: 50%;
+}
+
+.pulse .seat-tree ul > li:last-child::before {
+  right: 50%;
+}
+
+.pulse .seat-tree ul > li:only-child::before {
+  border-top: 0;
+}
+
+.pulse .seat-tree ul > li::after {
+  content: "";
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  height: 18px;
+  border-left: 1px solid #9eb7ae;
+}
+
+.pulse .seat-tree li > ul::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 18px;
+  border-left: 1px solid #9eb7ae;
+}
+
+.pulse .seat-card {
+  width: 265px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #d5e1db;
+  border-top: 3px solid #237d72;
+  border-radius: 10px;
+  padding: 17px;
+  text-align: left;
+  box-shadow: 0 3px 12px #102d3908;
+}
+
+.pulse .seat-card h3 {
+  font-size: 19px;
+  margin: 10px 0 0;
+}
+
+.pulse .seat-card .btn {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.pulse .seat-card ul {
+  display: block;
+  list-style: disc;
+  padding: 8px 0 0 18px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.pulse .seat-card li {
+  padding: 3px 0;
+  text-align: left;
+  position: static;
+}
+
+.pulse .seat-card ul > li::before,
+.pulse .seat-card ul > li::after,
+.pulse .seat-card li::before,
+.pulse .seat-card li::after {
+  content: none;
+  display: none;
+  border: 0;
+}
+
+.pulse .seat-person {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.pulse .seat-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e7f3ef;
+  display: grid;
+  place-items: center;
+  color: #237d72;
+  font-weight: 800;
+}
+
+.pulse .seat-directory {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.pulse .seat-directory .seat-card {
+  width: 100%;
+}
+
+@media (max-width: 950px) {
+  .pulse .vision-layout,
+  .pulse .strategy-swot {
+    grid-template-columns: 1fr;
+  }
+}

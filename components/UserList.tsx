@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { VIEW_SECTION_LABELS, VIEW_SECTIONS } from "@/lib/sections";
 import { CAMPUS_ACCESS_OPTIONS, canEditBenchmarks } from "@/lib/permissions";
+import { OS_MEETING_LABELS, type OsTeam } from "@/lib/os/types";
 import type { ManagedUser } from "@/lib/types";
 import { UserEditModal } from "./UserEditModal";
 
@@ -39,23 +40,24 @@ function summarizeAccess(user: ManagedUser): string {
               .join(", ") || "none"
           }`,
         ];
-  return [...campus, ...pages, ...extras].join(" · ") || "No access";
+  const meetings = (user.pulseTeams ?? [])
+    .map((team) => OS_MEETING_LABELS[team as OsTeam])
+    .filter(Boolean);
+  return [...campus, ...pages, ...extras, ...meetings].join(" · ") || "No access";
 }
 
 export function UserList({ users }: UserListProps) {
   const [selected, setSelected] = useState<ManagedUser | null>(null);
 
   if (users.length === 0) {
-    return (
-      <p className="text-sm text-base-content/60">No users found yet.</p>
-    );
+    return <p>No users found yet.</p>;
   }
 
   return (
     <>
-      <p className="text-sm text-base-content/60 mb-3">Click a row to edit permissions.</p>
-      <div className="overflow-x-auto">
-        <table className="table table-sm">
+      <p>Click a row to edit permissions.</p>
+      <div className="welcome-tablewrap">
+        <table className="welcome-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -68,7 +70,6 @@ export function UserList({ users }: UserListProps) {
             {users.map((user) => (
               <tr
                 key={user.id}
-                className="hover:bg-base-200 cursor-pointer transition-colors"
                 onClick={() => setSelected(user)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -83,7 +84,7 @@ export function UserList({ users }: UserListProps) {
                 <td>{user.display_name ?? "—"}</td>
                 <td>{user.email}</td>
                 <td className="capitalize">{user.role}</td>
-                <td className="text-base-content/70">{summarizeAccess(user)}</td>
+                <td className="welcome-muted">{summarizeAccess(user)}</td>
               </tr>
             ))}
           </tbody>

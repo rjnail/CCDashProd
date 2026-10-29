@@ -86,127 +86,122 @@ export function BenchmarkEditModal({
 
   return (
     <dialog className="modal modal-open">
-      <div className="modal-box max-w-md">
-        <h3 className="font-semibold text-lg">Edit benchmark</h3>
-        <p className="text-sm text-base-content/70 mt-1 mb-4">
+      <div className="modal-box welcome-card">
+        <h2>Edit benchmark</h2>
+        <p>
           Update this comparison point. Changes appear on the dashboard
           immediately.
         </p>
 
-        <form onSubmit={handleSave} className="flex flex-col gap-4 w-full">
-          <label className="form-control w-full">
-            <span className="label-text">Metric</span>
-            <select
-              className="select select-bordered w-full"
-              value={metricId}
-              onChange={(e) => setMetricId(e.target.value)}
-              required
-            >
-              {metrics.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <form onSubmit={handleSave}>
+          <div className="welcome-fields">
+            <label className="welcome-field">
+              <span>Metric</span>
+              <select
+                value={metricId}
+                onChange={(e) => setMetricId(e.target.value)}
+                required
+              >
+                {metrics.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Ministry area</span>
-            <select
-              className="select select-bordered w-full"
-              value={ministryArea}
-              onChange={(e) => setMinistryArea(e.target.value)}
-            >
-              {BENCHMARK_MINISTRY_AREAS.map((area) => (
-                <option key={area} value={area}>
-                  {VIEW_SECTION_LABELS[area]}
-                </option>
-              ))}
-              <option value="">None</option>
-            </select>
-          </label>
+            <label className="welcome-field">
+              <span>Ministry area</span>
+              <select
+                value={ministryArea}
+                onChange={(e) => setMinistryArea(e.target.value)}
+              >
+                {BENCHMARK_MINISTRY_AREAS.map((area) => (
+                  <option key={area} value={area}>
+                    {VIEW_SECTION_LABELS[area]}
+                  </option>
+                ))}
+                <option value="">None</option>
+              </select>
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Campus (optional)</span>
-            <select
-              className="select select-bordered w-full"
-              value={campusId}
-              onChange={(e) => setCampusId(e.target.value)}
-            >
-              <option value="">Church-wide</option>
-              {campuses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="welcome-field">
+              <span>Campus (optional)</span>
+              <select
+                value={campusId}
+                onChange={(e) => setCampusId(e.target.value)}
+              >
+                <option value="">Church-wide</option>
+                {campuses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Fiscal year</span>
-            <select
-              className="select select-bordered w-full"
-              value={fiscalYear}
-              onChange={(e) => setFiscalYear(e.target.value)}
-              required
-            >
-              {FISCAL_YEAR_OPTIONS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="welcome-field">
+              <span>Fiscal year</span>
+              <select
+                value={fiscalYear}
+                onChange={(e) => setFiscalYear(e.target.value)}
+                required
+              >
+                {FISCAL_YEAR_OPTIONS.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">
-              Benchmark value
-              {selectedMetric ? ` (${selectedMetric.unit})` : ""}
-            </span>
-            <input
-              type="number"
-              step="any"
-              className="input input-bordered w-full"
-              value={targetValue}
-              onChange={(e) => setTargetValue(e.target.value)}
-              required
-            />
-          </label>
+            <label className="welcome-field">
+              <span>
+                Benchmark value
+                {selectedMetric ? ` (${selectedMetric.unit})` : ""}
+              </span>
+              <input
+                type="number"
+                step="any"
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value)}
+                required
+              />
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Stretch goal (optional)</span>
-            <input
-              type="number"
-              step="any"
-              className="input input-bordered w-full"
-              value={stretchValue}
-              onChange={(e) => setStretchValue(e.target.value)}
-            />
-          </label>
+            <label className="welcome-field">
+              <span>Stretch goal (optional)</span>
+              <input
+                type="number"
+                step="any"
+                value={stretchValue}
+                onChange={(e) => setStretchValue(e.target.value)}
+              />
+            </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Label (optional)</span>
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          </label>
+            <label className="welcome-field">
+              <span>Label (optional)</span>
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            </label>
+          </div>
 
-          {error && <div className="alert alert-error text-sm">{error}</div>}
+          {error && <div className="welcome-note welcome-note-bad">{error}</div>}
 
-          <div className="modal-action mt-2">
+          <div className="welcome-actions">
+            <button type="submit" className="welcome-admin" disabled={loading}>
+              {loading ? "Saving…" : "Save changes"}
+            </button>
             <button
               type="button"
-              className="btn btn-ghost"
+              className="welcome-back"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Saving…" : "Save changes"}
             </button>
           </div>
         </form>

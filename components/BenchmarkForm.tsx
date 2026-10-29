@@ -65,135 +65,125 @@ export function BenchmarkForm({ metrics, campuses }: BenchmarkFormProps) {
   const selectedMetric = metrics.find((m) => m.id === metricId);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="card bg-base-100 border border-base-300 shadow-sm max-w-md"
-    >
-      <div className="card-body gap-4">
-        <h2 className="card-title text-lg">Add benchmark</h2>
-        <p className="text-sm text-base-content/70">
-          Benchmarks appear on the dashboard with a stoplight: green (on track),
-          yellow (needs attention), red (below benchmark).
-        </p>
+    <form onSubmit={handleSubmit} className="welcome-card">
+      <h2>Add benchmark</h2>
+      <p>
+        Benchmarks appear on the dashboard with a stoplight: green (on track),
+        yellow (needs attention), red (below benchmark).
+      </p>
 
-        <div className="flex flex-col gap-4 w-full">
-          <label className="form-control w-full">
-            <span className="label-text">Metric</span>
-            <select
-              className="select select-bordered w-full"
-              value={metricId}
-              onChange={(e) => {
-                const nextId = e.target.value;
-                setMetricId(nextId);
-                setMinistryArea(
-                  defaultMinistryAreaForMetric(
-                    metrics.find((m) => m.id === nextId)?.key
-                  ) ?? ""
-                );
-              }}
-              required
-            >
-              {metrics.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </label>
+      <div className="welcome-fields">
+        <label className="welcome-field">
+          <span>Metric</span>
+          <select
+            value={metricId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              setMetricId(nextId);
+              setMinistryArea(
+                defaultMinistryAreaForMetric(
+                  metrics.find((m) => m.id === nextId)?.key
+                ) ?? ""
+              );
+            }}
+            required
+          >
+            {metrics.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Ministry area</span>
-            <select
-              className="select select-bordered w-full"
-              value={ministryArea}
-              onChange={(e) => setMinistryArea(e.target.value)}
-            >
-              {BENCHMARK_MINISTRY_AREAS.map((area) => (
-                <option key={area} value={area}>
-                  {VIEW_SECTION_LABELS[area]}
-                </option>
-              ))}
-              <option value="">None</option>
-            </select>
-          </label>
+        <label className="welcome-field">
+          <span>Ministry area</span>
+          <select
+            value={ministryArea}
+            onChange={(e) => setMinistryArea(e.target.value)}
+          >
+            {BENCHMARK_MINISTRY_AREAS.map((area) => (
+              <option key={area} value={area}>
+                {VIEW_SECTION_LABELS[area]}
+              </option>
+            ))}
+            <option value="">None</option>
+          </select>
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Campus (optional)</span>
-            <select
-              className="select select-bordered w-full"
-              value={campusId}
-              onChange={(e) => setCampusId(e.target.value)}
-            >
-              <option value="">Church-wide</option>
-              {campuses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <label className="welcome-field">
+          <span>Campus (optional)</span>
+          <select
+            value={campusId}
+            onChange={(e) => setCampusId(e.target.value)}
+          >
+            <option value="">Church-wide</option>
+            {campuses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Fiscal year</span>
-            <select
-              className="select select-bordered w-full"
-              value={fiscalYear}
-              onChange={(e) => setFiscalYear(e.target.value)}
-              required
-            >
-              {FISCAL_YEAR_OPTIONS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
+        <label className="welcome-field">
+          <span>Fiscal year</span>
+          <select
+            value={fiscalYear}
+            onChange={(e) => setFiscalYear(e.target.value)}
+            required
+          >
+            {FISCAL_YEAR_OPTIONS.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">
-              Benchmark value
-              {selectedMetric ? ` (${selectedMetric.unit})` : ""}
-            </span>
-            <input
-              type="number"
-              step="any"
-              className="input input-bordered w-full"
-              value={targetValue}
-              onChange={(e) => setTargetValue(e.target.value)}
-              placeholder={
-                selectedMetric?.unit === "percent" ? "e.g. 20" : "e.g. 1500"
-              }
-              required
-            />
-          </label>
+        <label className="welcome-field">
+          <span>
+            Benchmark value
+            {selectedMetric ? ` (${selectedMetric.unit})` : ""}
+          </span>
+          <input
+            type="number"
+            step="any"
+            value={targetValue}
+            onChange={(e) => setTargetValue(e.target.value)}
+            placeholder={
+              selectedMetric?.unit === "percent" ? "e.g. 20" : "e.g. 1500"
+            }
+            required
+          />
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Stretch goal (optional)</span>
-            <input
-              type="number"
-              step="any"
-              className="input input-bordered w-full"
-              value={stretchValue}
-              onChange={(e) => setStretchValue(e.target.value)}
-            />
-          </label>
+        <label className="welcome-field">
+          <span>Stretch goal (optional)</span>
+          <input
+            type="number"
+            step="any"
+            value={stretchValue}
+            onChange={(e) => setStretchValue(e.target.value)}
+          />
+        </label>
 
-          <label className="form-control w-full">
-            <span className="label-text">Label (optional)</span>
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Kids % of total attendance"
-            />
-          </label>
-        </div>
+        <label className="welcome-field">
+          <span>Label (optional)</span>
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Kids % of total attendance"
+          />
+        </label>
+      </div>
 
-        {error && <div className="alert alert-error text-sm">{error}</div>}
-        {message && <div className="alert alert-success text-sm">{message}</div>}
+      {error && <div className="welcome-note welcome-note-bad">{error}</div>}
+      {message && <div className="welcome-note welcome-note-ok">{message}</div>}
 
-        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+      <div className="welcome-actions">
+        <button type="submit" className="welcome-admin" disabled={loading}>
           {loading ? "Saving…" : "Add benchmark"}
         </button>
       </div>

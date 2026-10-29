@@ -1,6 +1,8 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   DEFAULT_STAFF_PERMISSIONS,
+  isMalformedArrayLiteral,
+  normalizeMonthlyExpensesScope,
   normalizeUserProfile,
 } from "./permissions";
 import type { UserProfile } from "./types";
@@ -88,6 +90,35 @@ export async function queryAllUserProfileRows(
   }
 
   return [];
+}
+
+export async function updateUserProfileRow(
+  supabase: SupabaseClient,
+  userId: string,
+  updates: Record<string, unknown>
+) {
+  const first = await supabase
+    .from("user_profiles")
+    .update(updates)
+    .eq("id", userId)
+    .select(USER_PROFILE_EXTENDED_SELECT)
+    .single();
+
+  if (!first.error || !isMalformedArrayLiteral(first.error)) {
+    return first;
+  }
+
+  return supabase
+    .from("user_profiles")
+    .update({
+      ...updates,
+      monthly_expenses_scope: normalizeMonthlyExpensesScope(
+        updates.monthly_expenses_scope
+      ),
+    })
+    .eq("id", userId)
+    .select(USER_PROFILE_EXTENDED_SELECT)
+    .single();
 }
 
 export async function resolveUserProfile(

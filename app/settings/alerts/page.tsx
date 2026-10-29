@@ -1,8 +1,9 @@
+import { AlertForm } from "@/components/AlertForm";
+import { BrandLogo } from "@/components/BrandLogo";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertForm } from "@/components/AlertForm";
-import { Navbar } from "@/components/Navbar";
-import { createClient } from "@/lib/supabase/server";
+import "@/components/os/shell.css";
 import {
   getAlertThresholds,
   getCampuses,
@@ -24,54 +25,41 @@ export default async function AlertsSettingsPage() {
   ]);
 
   return (
-    <>
-      <Navbar profile={profile} />
-      <main className="mx-auto w-full max-w-3xl p-4 md:p-8 space-y-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Alert thresholds</h1>
-            <p className="text-sm text-base-content/70">
-              Administrators can set rules that surface on the dashboard
-              concerns panel.
-            </p>
-          </div>
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            Back to dashboard
-          </Link>
-        </div>
-
-        <AlertForm metrics={metrics} campuses={campuses} />
-
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title text-lg">Active thresholds</h2>
+    <main className="welcome welcome-page">
+      <div className="welcome-inner">
+        <BrandLogo href={null} showSubtitle={false} />
+        <h1>Alerts</h1>
+        <p>
+          Administrators can set rules that surface on the dashboard concerns
+          panel.
+        </p>
+        <div className="welcome-stack">
+          <AlertForm metrics={metrics} campuses={campuses} />
+          <section className="welcome-card">
+            <h2>Active thresholds</h2>
             {thresholds.length === 0 ? (
-              <p className="text-sm text-base-content/60">
-                No thresholds configured yet.
-              </p>
+              <p>No thresholds configured yet.</p>
             ) : (
-              <ul className="space-y-3">
+              <ul className="welcome-list">
                 {thresholds.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-base-300 pb-3 last:border-0"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {t.label ?? t.metric?.label}
-                      </p>
-                      <p className="text-sm text-base-content/60">
-                        {t.campus?.name ?? "Church-wide"} · threshold{" "}
-                        {t.drop_percent}% over {t.months_window} months
-                      </p>
-                    </div>
+                  <li key={t.id}>
+                    <p className="welcome-item-title">
+                      {t.label ?? t.metric?.label}
+                    </p>
+                    <p>
+                      {t.campus?.name ?? "Church-wide"} · threshold{" "}
+                      {t.drop_percent}% over {t.months_window} months
+                    </p>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </div>
-      </main>
-    </>
+        <Link href="/settings" className="welcome-back">
+          Back to admin settings
+        </Link>
+      </div>
+    </main>
   );
 }

@@ -51,7 +51,7 @@ export function PermissionCheckboxes({
 
   if (isAdmin) {
     return (
-      <p className="text-sm text-base-content/70">
+      <p>
         Administrators have access to all dashboard pages and can edit
         benchmarks.
       </p>
@@ -72,35 +72,31 @@ export function PermissionCheckboxes({
     value.campus_access.length === ALL_CAMPUS_ACCESS.length;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm font-medium mb-2">Campus access</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div>
+      <div className="welcome-group">
+        <h3>Campus access</h3>
+        <div className="welcome-checks">
           {CAMPUS_ACCESS_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className="label cursor-pointer justify-start gap-3 py-1"
-            >
+            <label key={option.value} className="welcome-check">
               <input
                 type="checkbox"
-                className="checkbox checkbox-sm"
                 checked={value.campus_access.includes(option.value)}
                 disabled={disabled}
                 onChange={(e) =>
                   toggleCampusAccess(option.value, e.target.checked)
                 }
               />
-              <span className="label-text">{option.label}</span>
+              <span>{option.label}</span>
             </label>
           ))}
         </div>
         {value.campus_access.length === 0 ? (
-          <p className="text-xs text-error mt-1">
+          <p className="welcome-status welcome-status-bad">
             Select at least one campus access option.
           </p>
         ) : (
           !hasFullCampusAccess && (
-            <p className="text-xs text-base-content/60 mt-1">
+            <p>
               Dashboard, Volunteer Matrix, and Monthly Expenses only show the
               checked options. Views that compare every campus are hidden.
             </p>
@@ -108,9 +104,9 @@ export function PermissionCheckboxes({
         )}
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-2">Dashboard pages</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="welcome-group">
+        <h3>Dashboard pages</h3>
+        <div className="welcome-checks">
           {VIEW_SECTIONS.filter((section) => section !== "vital-signs").map((section) => {
             const key =
               section === "overview"
@@ -124,18 +120,14 @@ export function PermissionCheckboxes({
                       : "can_view_operations";
 
             return (
-              <label
-                key={section}
-                className="label cursor-pointer justify-start gap-3 py-1"
-              >
+              <label key={section} className="welcome-check">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-sm"
                   checked={value[key]}
                   disabled={disabled}
                   onChange={(e) => togglePage(key, e.target.checked)}
                 />
-                <span className="label-text">
+                <span>
                   {VIEW_SECTION_LABELS[section]}
                   {section === "overview" ? " (+ Vital Signs)" : ""}
                 </span>
@@ -145,35 +137,33 @@ export function PermissionCheckboxes({
         </div>
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-2">Volunteer matrix</p>
-        <label className="label cursor-pointer justify-start gap-3 py-1">
+      <div className="welcome-group">
+        <h3>Volunteer matrix</h3>
+        <label className="welcome-check">
           <input
             type="checkbox"
-            className="checkbox checkbox-sm"
             checked={value.can_view_volunteer_matrix}
             disabled={disabled}
             onChange={(e) =>
               togglePage("can_view_volunteer_matrix", e.target.checked)
             }
           />
-          <span className="label-text">View volunteer matrix</span>
+          <span>View volunteer matrix</span>
         </label>
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-2">Monthly expenses</p>
-        <label className="label cursor-pointer justify-start gap-3 py-1">
+      <div className="welcome-group">
+        <h3>Monthly expenses</h3>
+        <label className="welcome-check">
           <input
             type="checkbox"
-            className="checkbox checkbox-sm"
             checked={value.can_view_monthly_expenses}
             disabled={disabled}
             onChange={(e) =>
               togglePage("can_view_monthly_expenses", e.target.checked)
             }
           />
-          <span className="label-text">View monthly expenses dashboard</span>
+          <span>View monthly expenses dashboard</span>
         </label>
 
         {value.can_view_monthly_expenses && (
@@ -211,19 +201,18 @@ export function PermissionCheckboxes({
         )}
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-2">Editing</p>
-        <label className="label cursor-pointer justify-start gap-3 py-1">
+      <div className="welcome-group">
+        <h3>Editing</h3>
+        <label className="welcome-check">
           <input
             type="checkbox"
-            className="checkbox checkbox-sm"
             checked={value.can_edit_benchmarks}
             disabled={disabled}
             onChange={(e) =>
               togglePage("can_edit_benchmarks", e.target.checked)
             }
           />
-          <span className="label-text">Edit benchmarks</span>
+          <span>Edit benchmarks</span>
         </label>
       </div>
     </div>

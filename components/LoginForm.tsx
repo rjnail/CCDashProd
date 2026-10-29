@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 const LOGIN_INPUT_CLASS =
   "input input-bordered w-full min-h-11 border-2 shadow-sm";
 
-export function LoginForm() {
+export function LoginForm({ nextPath }: { nextPath?: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,7 +47,7 @@ export function LoginForm() {
       if (signInError) {
         setError(signInError.message);
       } else {
-        router.push("/dashboard");
+        router.push(nextPath || "/");
         router.refresh();
       }
     }

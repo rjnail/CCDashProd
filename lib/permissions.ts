@@ -172,6 +172,15 @@ export function canViewVolunteerMatrix(profile: UserProfile): boolean {
   );
 }
 
+export function isMalformedArrayLiteral(
+  error: { code?: string; message?: string } | null
+): boolean {
+  if (!error) return false;
+  const message = (error.message ?? "").toLowerCase();
+  return error.code === "22P02" || message.includes("malformed array literal");
+}
+
+
 export function allowedExpenseCampuses(
   profile: UserProfile
 ): ExpenseCampusSlug[] {

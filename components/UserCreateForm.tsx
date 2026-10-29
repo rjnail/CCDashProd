@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MeetingCheckboxes } from "@/components/MeetingCheckboxes";
 import { DEFAULT_STAFF_PERMISSIONS } from "@/lib/permissions";
+import type { OsTeam } from "@/lib/os/types";
 import {
   PermissionCheckboxes,
   type PermissionFormState,
@@ -16,13 +18,16 @@ export function UserCreateForm() {
   const [role, setRole] = useState<"staff" | "admin">("staff");
   const [permissions, setPermissions] =
     useState<PermissionFormState>(DEFAULT_STAFF_PERMISSIONS);
+  const [meetings, setMeetings] = useState<OsTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setWarning(null);
     setMessage(null);
     if (role === "staff" && permissions.campus_access.length === 0) {
       setError("Select at least one campus access option.");
@@ -47,6 +52,7 @@ export function UserCreateForm() {
         displayName,
         role,
         permissions: role === "staff" ? permissions : undefined,
+        meetings,
       }),
     });
 
@@ -59,80 +65,75 @@ export function UserCreateForm() {
     }
 
     setMessage(`Created ${result.user.email}`);
+    setWarning(result.meetingsWarning ?? null);
     setEmail("");
     setPassword("");
     setDisplayName("");
     setRole("staff");
     setPermissions(DEFAULT_STAFF_PERMISSIONS);
+    setMeetings([]);
     router.refresh();
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="card bg-base-100 border border-base-300 shadow-sm"
-    >
-      <div className="card-body gap-4">
-        <h2 className="card-title text-lg">Add user</h2>
-        <p className="text-sm text-base-content/70">
-          Create a staff account and choose which dashboard pages they can view.
-        </p>
+    <form onSubmit={handleSubmit} className="welcome-card">
+      <h2>Add user</h2>
+      <p>Create a staff account and choose which dashboard pages they can view.</p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="form-control">
-            <span className="label-text">Email</span>
-            <input
-              type="email"
-              className="input input-bordered"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-          <label className="form-control">
-            <span className="label-text">Temporary password</span>
-            <input
-              type="password"
-              className="input input-bordered"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-          </label>
-          <label className="form-control">
-            <span className="label-text">Display name</span>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Optional"
-            />
-          </label>
-          <label className="form-control">
-            <span className="label-text">Role</span>
-            <select
-              className="select select-bordered"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "staff" | "admin")}
-            >
-              <option value="staff">Staff</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </label>
-        </div>
+      <div className="welcome-fields welcome-fields-2">
+        <label className="welcome-field">
+          <span>Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
+        <label className="welcome-field">
+          <span>Temporary password</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
+            required
+          />
+        </label>
+        <label className="welcome-field">
+          <span>Display name</span>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Optional"
+          />
+        </label>
+        <label className="welcome-field">
+          <span>Role</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as "staff" | "admin")}
+          >
+            <option value="staff">Staff</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </label>
+      </div>
 
-        <PermissionCheckboxes
-          value={permissions}
-          onChange={setPermissions}
-          isAdmin={role === "admin"}
-        />
+      <PermissionCheckboxes
+        value={permissions}
+        onChange={setPermissions}
+        isAdmin={role === "admin"}
+      />
+      <MeetingCheckboxes value={meetings} onChange={setMeetings} />
 
-        {error && <div className="alert alert-error text-sm">{error}</div>}
-        {message && <div className="alert alert-success text-sm">{message}</div>}
+      {error && <div className="welcome-note welcome-note-bad">{error}</div>}
+      {warning && <div className="welcome-note">{warning}</div>}
+      {message && <div className="welcome-note welcome-note-ok">{message}</div>}
 
-        <button type="submit" className="btn btn-primary" disabled={loading}>
+      <div className="welcome-actions">
+        <button type="submit" className="welcome-admin" disabled={loading}>
           {loading ? "Creating…" : "Create user"}
         </button>
       </div>

@@ -89,6 +89,7 @@ export type UserProfile = {
 
 export type ManagedUser = UserProfile & {
   email: string;
+  pulseTeams: ("executive" | "pastoral" | "leadership")[];
 };
 
 export type AlertThreshold = {

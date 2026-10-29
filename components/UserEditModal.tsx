@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MeetingCheckboxes } from "@/components/MeetingCheckboxes";
 import {
   ADMIN_PERMISSIONS,
   permissionsFromProfile,
 } from "@/lib/permissions";
+import type { OsTeam } from "@/lib/os/types";
 import type { ManagedUser } from "@/lib/types";
 import {
   PermissionCheckboxes,
@@ -25,15 +27,19 @@ export function UserEditModal({ user, open, onClose }: UserEditModalProps) {
   const [permissions, setPermissions] = useState<PermissionFormState>(
     ADMIN_PERMISSIONS
   );
+  const [meetings, setMeetings] = useState<OsTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     setDisplayName(user.display_name ?? "");
     setRole(user.role);
     setPermissions(permissionsFromProfile(user));
+    setMeetings(user.pulseTeams ?? []);
     setError(null);
+    setWarning(null);
   }, [user]);
 
   async function handleSave(e: React.FormEvent) {
@@ -41,6 +47,7 @@ export function UserEditModal({ user, open, onClose }: UserEditModalProps) {
     if (!user) return;
 
     setError(null);
+    setWarning(null);
     if (role === "staff" && permissions.campus_access.length === 0) {
       setError("Select at least one campus access option.");
       return;
@@ -62,6 +69,7 @@ export function UserEditModal({ user, open, onClose }: UserEditModalProps) {
         displayName,
         role,
         permissions: role === "staff" ? permissions : undefined,
+        meetings,
       }),
     });
 
@@ -73,6 +81,12 @@ export function UserEditModal({ user, open, onClose }: UserEditModalProps) {
       return;
     }
 
+    if (result.meetingsWarning) {
+      setWarning(result.meetingsWarning);
+      router.refresh();
+      return;
+    }
+
     onClose();
     router.refresh();
   }
@@ -81,52 +95,54 @@ export function UserEditModal({ user, open, onClose }: UserEditModalProps) {
 
   return (
     <dialog className="modal modal-open">
-      <div className="modal-box max-w-lg">
-        <h3 className="font-semibold text-lg">Edit user</h3>
-        <p className="text-sm text-base-content/70 mt-1 mb-4">{user.email}</p>
+      <div className="modal-box welcome-card">
+        <h2>Edit user</h2>
+        <p>{user.email}</p>
 
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <label className="form-control">
-            <span className="label-text">Display name</span>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-          </label>
+        <form onSubmit={handleSave}>
+          <div className="welcome-fields">
+            <label className="welcome-field">
+              <span>Display name</span>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </label>
 
-          <label className="form-control">
-            <span className="label-text">Role</span>
-            <select
-              className="select select-bordered"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "staff" | "admin")}
-            >
-              <option value="staff">Staff</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </label>
+            <label className="welcome-field">
+              <span>Role</span>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as "staff" | "admin")}
+              >
+                <option value="staff">Staff</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </label>
+          </div>
 
           <PermissionCheckboxes
             value={permissions}
             onChange={setPermissions}
             isAdmin={role === "admin"}
           />
+          <MeetingCheckboxes value={meetings} onChange={setMeetings} />
 
-          {error && <div className="alert alert-error text-sm">{error}</div>}
+          {error && <div className="welcome-note welcome-note-bad">{error}</div>}
+          {warning && <div className="welcome-note">{warning}</div>}
 
-          <div className="modal-action mt-2">
+          <div className="welcome-actions">
+            <button type="submit" className="welcome-admin" disabled={loading}>
+              {loading ? "Saving…" : "Save changes"}
+            </button>
             <button
               type="button"
-              className="btn btn-ghost"
+              className="welcome-back"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Saving…" : "Save changes"}
             </button>
           </div>
         </form>

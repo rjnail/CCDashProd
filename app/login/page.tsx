@@ -1,7 +1,14 @@
 import { LoginForm } from "@/components/LoginForm";
 import { BrandLogo } from "@/components/BrandLogo";
+import { safeNextPath } from "@/lib/safe-next";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{ next?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const nextPath = safeNextPath(params.next);
   return (
     <main className="min-h-screen grid lg:grid-cols-2">
       <section className="login-brand-panel flex flex-col justify-center gap-6 p-8 lg:p-12">
@@ -17,7 +24,7 @@ export default function LoginPage() {
         </div>
       </section>
       <section className="flex items-center justify-center p-6 bg-base-200">
-        <LoginForm />
+        <LoginForm nextPath={nextPath} />
       </section>
     </main>
   );

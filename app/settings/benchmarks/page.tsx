@@ -1,9 +1,10 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BenchmarkForm } from "@/components/BenchmarkForm";
 import { BenchmarkList } from "@/components/BenchmarkList";
-import { Navbar } from "@/components/Navbar";
+import { BrandLogo } from "@/components/BrandLogo";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import "@/components/os/shell.css";
 import {
   getBenchmarkTargets,
   getCampuses,
@@ -27,38 +28,29 @@ export default async function BenchmarksSettingsPage() {
   ]);
 
   return (
-    <>
-      <Navbar profile={profile} />
-      <main className="mx-auto w-full max-w-3xl p-4 md:p-8 space-y-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Benchmarks</h1>
-            <p className="text-sm text-base-content/70">
-              Set comparison points for dashboard metrics. Stoplights: green =
-              at/above benchmark, yellow = within 10%, red = more than 10%
-              below.
-            </p>
-          </div>
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            Back to dashboard
-          </Link>
-        </div>
-
-        <BenchmarkForm metrics={metrics} campuses={campuses} />
-
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title text-lg">
-              Active benchmarks ({TARGET_FISCAL_YEAR})
-            </h2>
+    <main className="welcome welcome-page">
+      <div className="welcome-inner">
+        <BrandLogo href={null} showSubtitle={false} />
+        <h1>Benchmarks</h1>
+        <p>
+          Set comparison points for dashboard metrics. Stoplights: green =
+          at/above benchmark, yellow = within 10%, red = more than 10% below.
+        </p>
+        <div className="welcome-stack">
+          <BenchmarkForm metrics={metrics} campuses={campuses} />
+          <section className="welcome-card">
+            <h2>Active benchmarks ({TARGET_FISCAL_YEAR})</h2>
             <BenchmarkList
               benchmarks={benchmarks}
               metrics={metrics}
               campuses={campuses}
             />
-          </div>
+          </section>
         </div>
-      </main>
-    </>
+        <Link href="/settings" className="welcome-back">
+          Back to admin settings
+        </Link>
+      </div>
+    </main>
   );
 }
